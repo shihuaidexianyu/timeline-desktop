@@ -67,7 +67,15 @@ type ApiEnvelope<T> = {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:46215'
 
 async function request<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`)
+  let response: Response
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`)
+  } catch {
+    throw new Error(
+      `无法连接本地服务 ${API_BASE_URL}，请确认 desktop-agent 已启动并已允许跨域访问。`,
+    )
+  }
+
   const payload = (await response.json()) as ApiEnvelope<T>
 
   if (!response.ok || !payload.ok || payload.data === null) {

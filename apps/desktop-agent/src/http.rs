@@ -13,6 +13,7 @@ use common::{ApiResponse, BrowserEventPayload, HealthResponse};
 use serde::Deserialize;
 use time::format_description::parse;
 use time::{Date, OffsetDateTime};
+use tower_http::cors::{Any, CorsLayer};
 
 pub fn build_router(state: AgentState) -> Router {
     Router::new()
@@ -23,6 +24,7 @@ pub fn build_router(state: AgentState) -> Router {
         .route("/api/stats/focus", get(get_focus_stats))
         .route("/api/debug/recent-events", get(get_recent_events))
         .route("/api/events/browser", post(post_browser_event))
+        .layer(build_cors_layer())
         .with_state(state)
 }
 
@@ -115,6 +117,13 @@ fn parse_or_today(value: Option<&str>, timezone: time::UtcOffset) -> Result<Date
     }
 
     Ok(OffsetDateTime::now_utc().to_offset(timezone).date())
+}
+
+fn build_cors_layer() -> CorsLayer {
+    CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any)
 }
 
 struct AppError {
