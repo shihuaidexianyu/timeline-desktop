@@ -102,10 +102,10 @@ function App() {
       <main className="app-shell">
         <section className="topbar-panel">
           <div className="title-block">
-            <p className="eyebrow">timeline / analysis panel</p>
-            <h1>注意力分析面板</h1>
+            <p className="eyebrow">timeline</p>
+            <h1>个人时间线</h1>
             <p className="hero-text">
-              主时间线以底部缩放条为主控件，最长可看 8 小时。点击浏览器应用段后，右侧展开该时间段对应的域名明细。
+              查看应用分布、active 时间和浏览器明细。
             </p>
           </div>
 
