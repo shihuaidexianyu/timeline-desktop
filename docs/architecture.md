@@ -2,7 +2,7 @@
 
 ## 模块划分
 
-- `desktop-agent` 负责本地采集、状态合并、SQLite 存储和 HTTP API
+- `timeline-agent` 负责本地采集、状态合并、SQLite 存储和 HTTP API
 - `browser-extension` 负责感知浏览器活动标签页，并把域名事件上报给本地服务
 - `web-ui` 负责展示每日时间线、统计分布和专注指标
 - `common` 负责共享的数据结构和 API 协议

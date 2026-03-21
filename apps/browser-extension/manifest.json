@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "timeline browser bridge",
   "version": "0.1.0",
-  "description": "Send active tab domain events to the local timeline desktop agent.",
+  "description": "Send active tab domain events to the local timeline agent.",
   "permissions": [
     "tabs",
     "windows",

@@ -6,7 +6,7 @@ Windows 本地个人注意力时间线系统。
 
 ## 当前技术方案
 
-- `apps/desktop-agent`：Rust 本地常驻服务，负责采集、存储和提供 HTTP API
+- `apps/timeline-agent`：Rust 本地常驻服务，负责采集、存储和提供 HTTP API
 - `apps/web-ui`：React + Vite 的本地网页前端
 - `apps/browser-extension`：Edge / Chrome 通用的 Manifest V3 扩展
 - `crates/common`：本地服务与前端共享的数据协议
@@ -28,13 +28,13 @@ Windows 本地个人注意力时间线系统。
 ### 1. 启动本地服务
 
 ```powershell
-cargo run -p desktop-agent
+cargo run -p timeline-agent
 ```
 
 可选配置文件路径：
 
 ```powershell
-cargo run -p desktop-agent -- --config config/desktop-agent.toml
+cargo run -p timeline-agent -- --config config/timeline-agent.toml
 ```
 
 默认会把数据库写到 `data/timeline.sqlite`，监听 `127.0.0.1:46215`。

@@ -37,7 +37,7 @@ async fn get_health(
     State(state): State<AgentState>,
 ) -> Result<Json<ApiResponse<HealthResponse>>, AppError> {
     Ok(Json(ApiResponse::ok(HealthResponse {
-        service: "desktop-agent".to_string(),
+        service: "timeline-agent".to_string(),
         version: env!("CARGO_PKG_VERSION").to_string(),
         status: "ok".to_string(),
         started_at: state.started_at(),

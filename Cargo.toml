@@ -1,6 +1,6 @@
 [workspace]
 members = [
-  "apps/desktop-agent",
+  "apps/timeline-agent",
   "crates/common",
 ]
 resolver = "2"

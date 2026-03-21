@@ -1,10 +1,10 @@
-//! Loads the desktop agent configuration from TOML and provides safe defaults.
+//! Loads the timeline agent configuration from TOML and provides safe defaults.
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
-const DEFAULT_CONFIG_PATH: &str = "config/desktop-agent.toml";
+const DEFAULT_CONFIG_PATH: &str = "config/timeline-agent.toml";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
@@ -24,7 +24,7 @@ impl Default for AppConfig {
     fn default() -> Self {
         Self {
             database_path: PathBuf::from("data/timeline.sqlite"),
-            lockfile_path: PathBuf::from("data/desktop-agent.lock"),
+            lockfile_path: PathBuf::from("data/timeline-agent.lock"),
             listen_addr: "127.0.0.1:46215".to_string(),
             idle_threshold_secs: 300,
             poll_interval_millis: 1_000,

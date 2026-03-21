@@ -1,4 +1,4 @@
-//! Entry point for the Windows desktop agent that collects focus and presence data.
+//! Entry point for the Windows timeline agent that collects focus and presence data.
 
 mod config;
 mod db;
@@ -39,7 +39,7 @@ async fn main() -> Result<()> {
         .await
         .with_context(|| format!("failed to bind {}", config.listen_addr))?;
 
-    info!(listen_addr = %config.listen_addr, "desktop agent started");
+    info!(listen_addr = %config.listen_addr, "timeline agent started");
     axum::serve(listener, build_router(state))
         .with_graceful_shutdown(shutdown_signal())
         .await
@@ -51,7 +51,7 @@ async fn main() -> Result<()> {
 fn init_tracing(debug: bool) {
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
         if debug {
-            EnvFilter::new("desktop_agent=debug,info")
+            EnvFilter::new("timeline_agent=debug,info")
         } else {
             EnvFilter::new("info")
         }
@@ -90,7 +90,7 @@ fn acquire_instance_lock(lockfile_path: &PathBuf) -> Result<std::fs::File> {
         .with_context(|| format!("failed to open {:?}", lockfile_path))?;
 
     file.try_lock_exclusive()
-        .map_err(|_| anyhow!("another desktop-agent instance is already running"))?;
+        .map_err(|_| anyhow!("another timeline-agent instance is already running"))?;
 
     Ok(file)
 }

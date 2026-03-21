@@ -1,4 +1,4 @@
-//! SQLite initialization, migrations, writes, and read models for the desktop agent.
+//! SQLite initialization, migrations, writes, and read models for the timeline agent.
 
 use crate::config::AppConfig;
 use anyhow::{Context, Result, anyhow};
