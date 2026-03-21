@@ -13,6 +13,8 @@ import {
 const LABEL_COLOR = '#1d2c43'
 const MUTED_COLOR = '#6f839f'
 const MONO_FAMILY = '"IBM Plex Mono", "SFMono-Regular", Consolas, monospace'
+const PIE_CENTER_X = '24%'
+const LEGEND_WIDTH = 132
 
 export function DonutChart(props: {
   title: string
@@ -58,35 +60,38 @@ export function DonutChart(props: {
       legend: {
         orient: 'vertical',
         top: 'middle',
-        right: 6,
+        right: 10,
+        width: LEGEND_WIDTH,
         icon: 'circle',
         selectedMode: false,
         itemWidth: 10,
         itemHeight: 10,
+        itemGap: 8,
         formatter: (label: string) => {
           const slice = sliceByLabel.get(label)
           if (!slice) {
             return label
           }
 
-          return `{name|${label}}\n{meta|${formatDuration(slice.value)}  ${slice.percentage.toFixed(
-            1,
-          )}%}`
+          return `{name|${truncateLabel(label, 18)}}\n{meta|${formatDuration(
+            slice.value,
+          )}  ${slice.percentage.toFixed(1)}%}`
         },
         textStyle: {
           rich: {
             name: {
               color: LABEL_COLOR,
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: 600,
-              width: 160,
+              width: LEGEND_WIDTH,
               overflow: 'truncate',
+              lineHeight: 16,
             },
             meta: {
               color: MUTED_COLOR,
               fontFamily: MONO_FAMILY,
-              fontSize: 11,
-              lineHeight: 16,
+              fontSize: 10,
+              lineHeight: 14,
             },
           },
         },
@@ -95,8 +100,8 @@ export function DonutChart(props: {
         {
           name: props.title,
           type: 'pie',
-          radius: ['58%', '80%'],
-          center: ['30%', '50%'],
+          radius: ['56%', '76%'],
+          center: [PIE_CENTER_X, '50%'],
           avoidLabelOverlap: true,
           label: { show: false },
           labelLine: { show: false },
@@ -132,18 +137,18 @@ export function DonutChart(props: {
       graphic: [
         {
           type: 'text',
-          left: '32%',
+          left: PIE_CENTER_X,
           top: '43%',
           style: {
             text: props.totalLabel,
             fill: LABEL_COLOR,
-            font: `600 18px ${MONO_FAMILY}`,
+            font: `600 17px ${MONO_FAMILY}`,
             textAlign: 'center',
           },
         },
         {
           type: 'text',
-          left: '30%',
+          left: PIE_CENTER_X,
           top: '53%',
           style: {
             text: 'total',
@@ -185,7 +190,7 @@ export function DonutChart(props: {
             props.onSelect(isActive ? null : { kind: props.filterKind, key: slice.key })
           },
         }}
-        style={{ height: 260, width: '100%' }}
+        style={{ height: 272, width: '100%' }}
       />
     </div>
   )
@@ -210,4 +215,12 @@ function escapeHtml(value: string) {
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
+}
+
+function truncateLabel(value: string, maxLength: number) {
+  if (value.length <= maxLength) {
+    return value
+  }
+
+  return `${value.slice(0, Math.max(maxLength - 1, 1))}…`
 }

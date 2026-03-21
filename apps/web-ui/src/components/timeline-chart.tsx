@@ -133,21 +133,10 @@ export function TimelineChart(props: {
         <strong>
           {formatClock(props.viewStartSec)} - {formatClock(props.viewEndSec)}
         </strong>
-        <span>拖拽平移，滚轮缩放</span>
+        <span>滚轮滚动列表，Shift + 滚轮缩放，拖动底部窗口平移</span>
       </div>
 
-      <div
-        className="timeline-waterfall"
-        onWheel={(event) =>
-          handleWheelZoom(event, {
-            minZoomSec,
-            maxZoomSec,
-            viewStartSec: props.viewStartSec,
-            viewEndSec: props.viewEndSec,
-            onViewportChange: props.onViewportChange,
-          })
-        }
-      >
+      <div className="timeline-waterfall">
         <div className="timeline-axis">
           <div className="timeline-axis-label">名称</div>
           <div className="timeline-axis-track">
@@ -163,7 +152,18 @@ export function TimelineChart(props: {
           </div>
         </div>
 
-        <div className="timeline-waterfall-body">
+        <div
+          className="timeline-waterfall-body"
+          onWheel={(event) =>
+            handleTimelineWheel(event, {
+              minZoomSec,
+              maxZoomSec,
+              viewStartSec: props.viewStartSec,
+              viewEndSec: props.viewEndSec,
+              onViewportChange: props.onViewportChange,
+            })
+          }
+        >
           {layout.map((row) => (
             <div key={row.id} className="timeline-row-block">
               <div className="timeline-row-head">
@@ -205,6 +205,7 @@ export function TimelineChart(props: {
                           className={`timeline-bar ${shouldDim ? 'is-dimmed' : ''} ${
                             isSelected ? 'is-selected' : ''
                           }`}
+                          aria-label={buildTooltipText(segment)}
                           style={{
                             left: `${leftPct}%`,
                             width: `${Math.max(widthPct, 0.7)}%`,
@@ -214,9 +215,7 @@ export function TimelineChart(props: {
                           onClick={() => {
                             props.onSelectSegment?.(segment)
                           }}
-                        >
-                          <span>{segment.label}</span>
-                        </button>
+                        />
                       )
                     })}
                   </div>
@@ -498,7 +497,7 @@ function beginOverviewDrag(
   }
 }
 
-function handleWheelZoom(
+function handleTimelineWheel(
   event: WheelEvent<HTMLDivElement>,
   options: {
     minZoomSec: number
@@ -508,7 +507,9 @@ function handleWheelZoom(
     onViewportChange?: (startSec: number, endSec: number) => void
   },
 ) {
-  if (!options.onViewportChange) {
+  const shouldZoom = event.shiftKey || event.ctrlKey || event.metaKey
+
+  if (!shouldZoom || !options.onViewportChange) {
     return
   }
 
