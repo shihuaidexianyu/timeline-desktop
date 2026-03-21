@@ -715,24 +715,22 @@
 
 .timeline-bar {
   position: absolute;
-  top: 1px;
-  bottom: 1px;
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  border-radius: 2px;
+  top: 0;
+  bottom: 0;
+  border: none;
+  border-radius: 0;
   padding: 0;
   background: #4f7cff;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
   transition:
-    transform 0.12s ease,
     opacity 0.12s ease,
     box-shadow 0.12s ease;
 }
 
 .timeline-bar:hover {
-  transform: translateY(-1px);
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.06),
-    0 4px 10px rgba(24, 37, 61, 0.14);
+    0 0 0 1px rgba(24, 37, 61, 0.08);
 }
 
 .timeline-bar.is-dimmed {

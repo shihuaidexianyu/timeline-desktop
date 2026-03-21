@@ -435,6 +435,15 @@ function TimelinePage(props: {
         <TimelineChart
           rows={[
             {
+              id: 'focus-overview',
+              label: '应用总览',
+              segments: props.dashboard.focusSegments,
+              selectedKey: props.appFilter?.key ?? null,
+              splitByKey: false,
+              includeInOverview: false,
+              includeInTable: false,
+            },
+            {
               id: 'focus',
               label: '应用',
               segments: props.dashboard.focusSegments,

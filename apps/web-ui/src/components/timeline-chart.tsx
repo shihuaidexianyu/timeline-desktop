@@ -13,6 +13,9 @@ type TimelineRow = {
   label: string
   segments: ChartSegment[]
   selectedKey?: string | null
+  splitByKey?: boolean
+  includeInOverview?: boolean
+  includeInTable?: boolean
 }
 
 type RowLayout = {
@@ -20,6 +23,8 @@ type RowLayout = {
   label: string
   selectedKey?: string | null
   lanes: ChartSegment[][]
+  includeInOverview: boolean
+  includeInTable: boolean
 }
 
 type OverviewSegment = {
@@ -343,8 +348,11 @@ export function TimelineChart(props: {
 function buildRows(rows: TimelineRow[]): RowLayout[] {
   return rows.flatMap((row) => {
     const shouldSplitByKey =
-      row.segments.length > 0 &&
-      (row.segments[0].tone === 'focus' || row.segments[0].tone === 'browser')
+      row.splitByKey ??
+      (row.segments.length > 0 &&
+        (row.segments[0].tone === 'focus' || row.segments[0].tone === 'browser'))
+    const includeInOverview = row.includeInOverview ?? true
+    const includeInTable = row.includeInTable ?? true
 
     if (!shouldSplitByKey) {
       return [
@@ -353,6 +361,8 @@ function buildRows(rows: TimelineRow[]): RowLayout[] {
           label: row.label,
           selectedKey: row.selectedKey,
           lanes: buildLanes(row.segments),
+          includeInOverview,
+          includeInTable,
         },
       ]
     }
@@ -381,6 +391,8 @@ function buildRows(rows: TimelineRow[]): RowLayout[] {
         label: group.label,
         selectedKey: row.selectedKey,
         lanes: buildLanes(group.segments),
+        includeInOverview,
+        includeInTable,
       }))
   })
 }
@@ -434,9 +446,10 @@ function buildTicks(viewStartSec: number, viewEndSec: number) {
 }
 
 function buildOverviewSegments(rows: RowLayout[]): OverviewSegment[] {
-  const totalRows = Math.max(rows.length, 1)
+  const overviewRows = rows.filter((row) => row.includeInOverview)
+  const totalRows = Math.max(overviewRows.length, 1)
 
-  return rows.flatMap((row, rowIndex) =>
+  return overviewRows.flatMap((row, rowIndex) =>
     row.lanes.flatMap((lane, laneIndex) =>
       lane.map((segment) => ({
         id: `${segment.id}-overview`,
@@ -453,6 +466,7 @@ function buildOverviewSegments(rows: RowLayout[]): OverviewSegment[] {
 
 function buildVisibleItems(rows: RowLayout[], viewStartSec: number, viewEndSec: number) {
   return rows
+    .filter((row) => row.includeInTable)
     .flatMap((row) => row.lanes.flatMap((lane) => lane))
     .filter((segment) => segment.endSec > viewStartSec && segment.startSec < viewEndSec)
     .sort((left, right) => {
