@@ -1,5 +1,7 @@
 # timeline
 
+![alt text](assets/1.png)
+![alt text](assets/2.png)
 Windows 本地个人注意力时间线系统。
 
 这个仓库当前实现的是 MVP 基础骨架，目标是先把本地采集、SQLite 存储、本地 HTTP API、Web UI 和浏览器扩展通信这条最小闭环跑通，再逐步补齐更细的分析能力。
@@ -64,3 +66,39 @@ npm run dev
 - 默认仅记录应用名、进程信息、窗口标题、域名和活跃状态
 - 默认不记录页面正文、输入内容、剪贴板和截图
 - 所有数据默认只保存在本地 SQLite
+
+## 打包安装包
+
+当前仓库已经提供 Windows 安装包脚本，默认使用 `Inno Setup 6` 生成可双击安装的 `.exe`。
+
+### 前置条件
+
+1. 安装 Node.js / npm
+2. 安装 Rust toolchain
+3. 安装 Inno Setup 6
+
+如果 `ISCC.exe` 没有进 PATH，脚本也会尝试从以下默认位置查找：
+
+- `C:\Program Files (x86)\Inno Setup 6\ISCC.exe`
+- `C:\Program Files\Inno Setup 6\ISCC.exe`
+
+### 构建安装包
+
+```powershell
+.\scripts\build-installer.ps1
+```
+
+脚本会自动完成：
+
+1. 构建 `apps/web-ui/dist`
+2. 构建 `timeline-agent.exe`
+3. 收集浏览器扩展目录
+4. 生成 Inno Setup staging 目录
+5. 输出安装包到 `target\installer\output`
+
+### 安装版布局
+
+- 程序安装到 `C:\Program Files\Timeline`
+- 用户配置写到 `%LOCALAPPDATA%\Timeline\config\timeline-agent.toml`
+- 用户数据写到 `%LOCALAPPDATA%\Timeline\data`
+- 浏览器扩展会一起安装到程序目录下的 `browser-extension`
