@@ -18,7 +18,8 @@
 .detail-timeline-card {
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);
-  box-shadow: 0 12px 28px rgba(15, 23, 38, 0.06);
+  box-shadow: 0 14px 32px rgba(2, 6, 15, 0.34);
+  backdrop-filter: blur(12px);
 }
 
 .topbar-panel {
@@ -37,6 +38,7 @@
 
 .title-block h1 {
   margin: 0;
+  letter-spacing: 0.01em;
 }
 
 .eyebrow,
@@ -87,6 +89,10 @@
   color: var(--text-main);
 }
 
+.field-card input::-webkit-calendar-picker-indicator {
+  filter: invert(0.88);
+}
+
 .toggle-card {
   justify-content: space-between;
 }
@@ -104,8 +110,8 @@
 .zoom-button {
   border: 1px solid var(--input-border);
   border-radius: 10px;
-  background: #ffffff;
-  color: var(--text-main);
+  background: rgba(22, 30, 42, 0.96);
+  color: #dce7fb;
   font: inherit;
   font-family: var(--mono-family);
   transition:
@@ -125,9 +131,9 @@
 .clear-filter-button:hover,
 .zoom-button.is-active,
 .zoom-button:hover:not(:disabled) {
-  background: #0f1726;
-  border-color: #0f1726;
-  color: #f8fafc;
+  background: #2b4f93;
+  border-color: #5387ef;
+  color: #f8fbff;
 }
 
 .zoom-button:disabled {
@@ -146,11 +152,11 @@
 }
 
 .status-ok {
-  color: #047857;
+  color: #43d39e;
 }
 
 .status-error {
-  color: #b42318;
+  color: #ff8f84;
 }
 
 .summary-grid {
@@ -194,6 +200,7 @@
   gap: 8px;
   padding: 8px 10px;
   border-radius: 999px;
+  background: rgba(18, 25, 36, 0.92);
 }
 
 .meta-pill strong {
@@ -656,6 +663,13 @@
   gap: 6px;
 }
 
+.donut-card .echarts-for-react {
+  border: 1px solid rgba(63, 79, 104, 0.4);
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(27, 35, 49, 0.98), rgba(17, 23, 34, 0.98));
+}
+
 .state-card {
   margin-top: 12px;
   padding: 12px 14px;
@@ -664,9 +678,9 @@
 }
 
 .error-card {
-  color: #b42318;
-  background: rgba(255, 241, 239, 0.95);
-  border-color: rgba(180, 35, 24, 0.15);
+  color: #ffaea6;
+  background: rgba(66, 22, 20, 0.86);
+  border-color: rgba(180, 64, 49, 0.38);
 }
 
 .chart-tooltip {
@@ -681,14 +695,17 @@
   border-radius: 10px;
   border-left-width: 3px;
   pointer-events: none;
+  background: rgba(14, 19, 28, 0.96);
+  border-color: rgba(92, 111, 145, 0.48);
 }
 
 .chart-tooltip strong {
   font-size: 0.82rem;
+  color: #f3f7ff;
 }
 
 .chart-tooltip span {
-  color: var(--text-soft);
+  color: #9db0d0;
   font-family: var(--mono-family);
   font-size: 0.74rem;
 }

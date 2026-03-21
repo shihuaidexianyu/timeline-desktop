@@ -15,22 +15,23 @@
     monospace;
   line-height: 1.5;
   font-weight: 400;
-  color: #0f1726;
+  color: #dbe7ff;
   background:
-    radial-gradient(circle at top right, rgba(79, 124, 255, 0.08), transparent 24%),
-    linear-gradient(180deg, #f4f7fb 0%, #ecf1f8 100%);
+    radial-gradient(circle at top right, rgba(70, 108, 189, 0.18), transparent 26%),
+    radial-gradient(circle at top left, rgba(17, 153, 142, 0.12), transparent 24%),
+    linear-gradient(180deg, #0b1018 0%, #0e1520 36%, #0c121b 100%);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  --text-main: #0f1726;
-  --text-soft: #546274;
-  --text-dim: #6d7b8d;
-  --panel-bg: rgba(255, 255, 255, 0.9);
-  --panel-border: rgba(130, 145, 165, 0.18);
-  --input-border: rgba(130, 145, 165, 0.24);
-  --input-bg: rgba(248, 250, 252, 0.96);
-  --lane-border: rgba(130, 145, 165, 0.2);
+  --text-main: #f4f7ff;
+  --text-soft: #9cafcc;
+  --text-dim: #7588a8;
+  --panel-bg: linear-gradient(180deg, rgba(25, 33, 47, 0.96), rgba(16, 22, 33, 0.98));
+  --panel-border: rgba(79, 97, 128, 0.42);
+  --input-border: rgba(86, 105, 137, 0.42);
+  --input-bg: rgba(17, 24, 35, 0.94);
+  --lane-border: rgba(68, 82, 108, 0.46);
 }
 
 * {
@@ -46,6 +47,7 @@ body,
 body {
   margin: 0;
   min-height: 100vh;
+  color: var(--text-main);
 }
 
 h1,

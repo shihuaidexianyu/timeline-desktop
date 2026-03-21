@@ -10,8 +10,8 @@ import {
   type DonutSlice,
 } from '../lib/chart-model'
 
-const LABEL_COLOR = '#0f1726'
-const MUTED_COLOR = '#667085'
+const LABEL_COLOR = '#eef4ff'
+const MUTED_COLOR = '#8fa4c6'
 const MONO_FAMILY = '"IBM Plex Mono", "SFMono-Regular", Consolas, monospace'
 
 export function DonutChart(props: {
@@ -33,8 +33,8 @@ export function DonutChart(props: {
       tooltip: {
         trigger: 'item',
         appendToBody: true,
-        backgroundColor: 'rgba(255, 255, 255, 0.98)',
-        borderColor: '#d7dee7',
+        backgroundColor: 'rgba(14, 19, 28, 0.96)',
+        borderColor: 'rgba(92, 111, 145, 0.48)',
         borderWidth: 1,
         textStyle: {
           color: LABEL_COLOR,
@@ -101,7 +101,7 @@ export function DonutChart(props: {
           label: { show: false },
           labelLine: { show: false },
           itemStyle: {
-            borderColor: '#ffffff',
+            borderColor: '#1a2231',
             borderWidth: 2,
           },
           emphasis: {
