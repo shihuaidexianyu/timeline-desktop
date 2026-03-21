@@ -101,8 +101,8 @@ export function DonutChart(props: {
           label: { show: false },
           labelLine: { show: false },
           itemStyle: {
-            borderColor: '#1a2231',
-            borderWidth: 2,
+            borderColor: '#f7faff',
+            borderWidth: 1.5,
           },
           emphasis: {
             scale: true,
@@ -137,7 +137,7 @@ export function DonutChart(props: {
           style: {
             text: props.totalLabel,
             fill: LABEL_COLOR,
-            font: `600 18px ${MONO_FAMILY}`,
+            font: `600 20px ${MONO_FAMILY}`,
             textAlign: 'center',
           },
         },
@@ -148,7 +148,7 @@ export function DonutChart(props: {
           style: {
             text: 'total',
             fill: MUTED_COLOR,
-            font: `12px ${MONO_FAMILY}`,
+            font: `13px ${MONO_FAMILY}`,
             textAlign: 'center',
           },
         },
