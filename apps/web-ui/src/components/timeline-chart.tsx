@@ -1,23 +1,7 @@
-/* Devtools-inspired waterfall timeline with stacked lanes and an overview navigator. */
+/* DevTools-inspired waterfall timeline with stacked lanes, navigator, and detail table. */
 
 import { useEffect, useMemo, useRef } from 'react'
-import type {
-  CSSProperties,
-  HTMLAttributes,
-  LegacyRef,
-  MutableRefObject,
-  PointerEvent as ReactPointerEvent,
-} from 'react'
-import Timeline, {
-  DateHeader,
-  SidebarHeader,
-  TimelineHeaders,
-  type Id,
-  type OnTimeChange,
-  type TimelineGroupBase,
-  type TimelineItemBase,
-} from 'react-calendar-timeline'
-import 'react-calendar-timeline/dist/style.css'
+import type { MutableRefObject, PointerEvent as ReactPointerEvent, WheelEvent } from 'react'
 import {
   formatClockRange,
   formatDuration,
@@ -31,21 +15,11 @@ type TimelineRow = {
   selectedKey?: string | null
 }
 
-type VisualGroup = TimelineGroupBase & {
-  title: string
-  rowId: string
-  laneIndex: number
-  laneCount: number
-  primary: boolean
-}
-
-type TimelineItem = TimelineItemBase<number> & {
-  segment: ChartSegment
+type RowLayout = {
+  id: string
   label: string
-  detail: string
-  opacity: number
-  color: string
-  className: string
+  selectedKey?: string | null
+  lanes: ChartSegment[][]
 }
 
 type OverviewSegment = {
@@ -58,20 +32,6 @@ type OverviewSegment = {
   opacity: number
 }
 
-type TimelineItemRendererProps = {
-  item: TimelineItem
-  itemContext: {
-    selected: boolean
-  }
-  getItemProps: (params: {
-    className?: string
-    style?: CSSProperties
-  }) => HTMLAttributes<HTMLDivElement> & {
-    key: string
-    ref: LegacyRef<HTMLDivElement>
-  }
-}
-
 type DragState = {
   mode: 'move' | 'resize-start' | 'resize-end'
   startClientX: number
@@ -80,10 +40,6 @@ type DragState = {
 }
 
 const DAY_SECONDS = 24 * 60 * 60
-const DEFAULT_DATE = '2026-03-21'
-const MIN_ZOOM_MS = 5 * 60 * 1000
-const SIDEBAR_WIDTH = 104
-const LINE_HEIGHT = 42
 const SNAP_SECONDS = 5 * 60
 
 export function TimelineChart(props: {
@@ -100,27 +56,19 @@ export function TimelineChart(props: {
 }) {
   const overviewRef = useRef<HTMLDivElement | null>(null)
   const dragStateRef = useRef<DragState | null>(null)
-  const baseMs = toLocalMidnightMs(props.baseDate ?? DEFAULT_DATE)
-  const visibleTimeStart = baseMs + props.viewStartSec * 1000
-  const visibleTimeEnd = baseMs + props.viewEndSec * 1000
-  const minZoom = Math.max((props.minViewHours ?? 1 / 12) * 3600 * 1000, MIN_ZOOM_MS)
-  const maxZoom = Math.min((props.maxViewHours ?? 24) * 3600 * 1000, DAY_SECONDS * 1000)
-  const minZoomSec = Math.round(minZoom / 1000)
-  const maxZoomSec = Math.round(maxZoom / 1000)
-  const layout = useMemo(
-    () => buildTimelineLayout(props.rows, baseMs, props.selectedSegmentId),
-    [baseMs, props.rows, props.selectedSegmentId],
+  const minZoomSec = Math.round((props.minViewHours ?? 1 / 12) * 3600)
+  const maxZoomSec = Math.round((props.maxViewHours ?? 24) * 3600)
+  const visibleDuration = props.viewEndSec - props.viewStartSec
+
+  const layout = useMemo(() => buildRows(props.rows), [props.rows])
+  const ticks = useMemo(
+    () => buildTicks(props.viewStartSec, props.viewEndSec),
+    [props.viewEndSec, props.viewStartSec],
   )
-  const selected = props.selectedSegmentId ? [props.selectedSegmentId] : []
-  const secondaryLabelFormat =
-    props.viewEndSec - props.viewStartSec <= 1800 ? 'HH:mm:ss' : 'HH:mm'
-  const viewportLabel = `${formatClock(props.viewStartSec)} - ${formatClock(props.viewEndSec)}`
-  const viewportDuration = props.viewEndSec - props.viewStartSec
-  const windowLeftPct = (props.viewStartSec / DAY_SECONDS) * 100
-  const windowWidthPct = (viewportDuration / DAY_SECONDS) * 100
-  const visibleTableItems = useMemo(
-    () => buildVisibleTableItems(layout.items, props.viewStartSec, props.viewEndSec),
-    [layout.items, props.viewEndSec, props.viewStartSec],
+  const overviewSegments = useMemo(() => buildOverviewSegments(layout), [layout])
+  const visibleItems = useMemo(
+    () => buildVisibleItems(layout, props.viewStartSec, props.viewEndSec),
+    [layout, props.viewEndSec, props.viewStartSec],
   )
 
   useEffect(() => {
@@ -137,11 +85,10 @@ export function TimelineChart(props: {
         return
       }
 
-      const deltaRatio = (event.clientX - drag.startClientX) / rect.width
-      const deltaSec = deltaRatio * DAY_SECONDS
+      const deltaSec = ((event.clientX - drag.startClientX) / rect.width) * DAY_SECONDS
 
       if (drag.mode === 'move') {
-        const next = clampWindow(drag.startSec + deltaSec, drag.endSec + deltaSec)
+        const next = clampWindow(drag.startSec + deltaSec, drag.endSec + deltaSec, visibleDuration)
         props.onViewportChange(next.startSec, next.endSec)
         return
       }
@@ -150,16 +97,14 @@ export function TimelineChart(props: {
         const proposedStart = snapToStep(drag.startSec + deltaSec)
         const minStart = Math.max(0, drag.endSec - maxZoomSec)
         const maxStart = Math.max(0, drag.endSec - minZoomSec)
-        const nextStart = clampNumber(proposedStart, minStart, maxStart)
-        props.onViewportChange(nextStart, drag.endSec)
+        props.onViewportChange(clampNumber(proposedStart, minStart, maxStart), drag.endSec)
         return
       }
 
       const proposedEnd = snapToStep(drag.endSec + deltaSec)
       const minEnd = Math.min(DAY_SECONDS, drag.startSec + minZoomSec)
       const maxEnd = Math.min(DAY_SECONDS, drag.startSec + maxZoomSec)
-      const nextEnd = clampNumber(proposedEnd, minEnd, maxEnd)
-      props.onViewportChange(drag.startSec, nextEnd)
+      props.onViewportChange(drag.startSec, clampNumber(proposedEnd, minEnd, maxEnd))
     }
 
     function handlePointerUp() {
@@ -175,99 +120,123 @@ export function TimelineChart(props: {
       window.removeEventListener('pointerup', handlePointerUp)
       window.removeEventListener('pointercancel', handlePointerUp)
     }
-  }, [maxZoomSec, minZoomSec, props])
+  }, [maxZoomSec, minZoomSec, props, visibleDuration])
 
-  if (layout.items.length === 0) {
+  if (layout.length === 0) {
     return <div className="empty-card">没有可展示的时间线数据</div>
   }
 
-  const handleTimeChange: OnTimeChange<TimelineItem, VisualGroup> = (
-    nextVisibleStart,
-    nextVisibleEnd,
-    updateScrollCanvas,
-  ) => {
-    const clamped = clampViewport(nextVisibleStart, nextVisibleEnd, baseMs, minZoom, maxZoom)
-    updateScrollCanvas(clamped.startMs, clamped.endMs)
-    props.onViewportChange?.(
-      Math.round((clamped.startMs - baseMs) / 1000),
-      Math.round((clamped.endMs - baseMs) / 1000),
-    )
-  }
-
   return (
-    <div className={`timeline-chart-host ${props.interactiveZoom ? 'is-interactive' : ''}`}>
-      <div className="timeline-chart-meta">
-        <span>Viewport</span>
-        <strong>{viewportLabel}</strong>
-        <span>{formatDuration(viewportDuration)}</span>
+    <section className="timeline-devtools">
+      <div className="timeline-devtools-head">
+        <div className="timeline-devtools-title">
+          <span>Waterfall</span>
+          <strong>
+            {formatClock(props.viewStartSec)} - {formatClock(props.viewEndSec)}
+          </strong>
+        </div>
+        <div className="timeline-devtools-stats">
+          <span>{layout.length} rows</span>
+          <span>{visibleItems.length} visible</span>
+          <span>{formatDuration(visibleDuration)}</span>
+        </div>
       </div>
 
-      <Timeline<TimelineItem, VisualGroup>
-        groups={layout.groups}
-        items={layout.items}
-        sidebarWidth={SIDEBAR_WIDTH}
-        rightSidebarWidth={0}
-        selected={selected}
-        defaultTimeStart={visibleTimeStart}
-        defaultTimeEnd={visibleTimeEnd}
-        visibleTimeStart={visibleTimeStart}
-        visibleTimeEnd={visibleTimeEnd}
-        canMove={false}
-        canResize={false}
-        canChangeGroup={false}
-        canSelect
-        stackItems={false}
-        lineHeight={LINE_HEIGHT}
-        itemHeightRatio={0.68}
-        dragSnap={SNAP_SECONDS * 1000}
-        minZoom={minZoom}
-        maxZoom={maxZoom}
-        buffer={1}
-        traditionalZoom={props.interactiveZoom}
-        onTimeChange={handleTimeChange}
-        onItemSelect={(itemId) => {
-          const segment = findSegmentById(layout.items, itemId)
-          if (segment) {
-            props.onSelectSegment?.(segment)
-          }
-        }}
-        onItemClick={(itemId) => {
-          const segment = findSegmentById(layout.items, itemId)
-          if (segment) {
-            props.onSelectSegment?.(segment)
-          }
-        }}
-        groupRenderer={({ group }) => (
-          <div className={`timeline-group-label ${group.primary ? 'is-primary' : 'is-secondary'}`}>
-            <strong>{group.primary ? group.title : ''}</strong>
-            <span>{group.primary ? `${group.laneCount} lanes` : `lane ${group.laneIndex + 1}`}</span>
-          </div>
-        )}
-        itemRenderer={(rendererProps) => renderItem(rendererProps)}
-        className="timeline-calendar"
+      <div
+        className="timeline-waterfall"
+        onWheel={(event) =>
+          handleWheelZoom(event, {
+            minZoomSec,
+            maxZoomSec,
+            viewStartSec: props.viewStartSec,
+            viewEndSec: props.viewEndSec,
+            onViewportChange: props.onViewportChange,
+          })
+        }
       >
-        <TimelineHeaders className="timeline-calendar-headers">
-          <SidebarHeader>
-            {({ getRootProps }) => (
-              <div {...getRootProps({ style: { background: 'transparent', border: 'none' } })} />
-            )}
-          </SidebarHeader>
-          <DateHeader
-            unit="primaryHeader"
-            labelFormat={([intervalStart]) => intervalStart.format('YYYY/MM/DD')}
-            className="timeline-primary-header"
-          />
-          <DateHeader
-            labelFormat={([intervalStart]) => intervalStart.format(secondaryLabelFormat)}
-            className="timeline-secondary-header"
-          />
-        </TimelineHeaders>
-      </Timeline>
+        <div className="timeline-axis">
+          <div className="timeline-axis-label">Name</div>
+          <div className="timeline-axis-track">
+            {ticks.map((tick) => (
+              <div
+                key={`${tick.seconds}-${tick.label}`}
+                className="timeline-axis-tick"
+                style={{ left: `${tick.positionPct}%` }}
+              >
+                <span>{tick.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="timeline-waterfall-body">
+          {layout.map((row) => (
+            <div key={row.id} className="timeline-row-block">
+              <div className="timeline-row-head">
+                <strong>{row.label}</strong>
+                <span>{row.lanes.length} lanes</span>
+              </div>
+
+              <div className="timeline-row-lanes">
+                {row.lanes.map((lane, laneIndex) => (
+                  <div key={`${row.id}-lane-${laneIndex}`} className="timeline-lane">
+                    {ticks.map((tick) => (
+                      <span
+                        key={`${row.id}-lane-${laneIndex}-${tick.seconds}`}
+                        className="timeline-lane-grid"
+                        style={{ left: `${tick.positionPct}%` }}
+                      />
+                    ))}
+
+                    {lane.map((segment) => {
+                      const clipped = clipSegment(segment, props.viewStartSec, props.viewEndSec)
+                      if (!clipped) {
+                        return null
+                      }
+
+                      const shouldDim =
+                        row.selectedKey !== null &&
+                        row.selectedKey !== undefined &&
+                        row.selectedKey !== segment.key
+                      const isSelected = props.selectedSegmentId === segment.id
+                      const leftPct =
+                        ((clipped.startSec - props.viewStartSec) / visibleDuration) * 100
+                      const widthPct =
+                        ((clipped.endSec - clipped.startSec) / visibleDuration) * 100
+
+                      return (
+                        <button
+                          key={segment.id}
+                          type="button"
+                          className={`timeline-bar ${shouldDim ? 'is-dimmed' : ''} ${
+                            isSelected ? 'is-selected' : ''
+                          }`}
+                          style={{
+                            left: `${leftPct}%`,
+                            width: `${Math.max(widthPct, 0.7)}%`,
+                            backgroundColor: segment.color,
+                          }}
+                          title={buildTooltipText(segment)}
+                          onClick={() => {
+                            props.onSelectSegment?.(segment)
+                          }}
+                        >
+                          <span>{segment.label}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {props.interactiveZoom ? (
         <div className="timeline-overview-panel">
-          <div className="timeline-overview-header">
-            <span>Navigator</span>
+          <div className="timeline-overview-head">
+            <span>Overview</span>
             <span>拖动窗口平移，拖两侧手柄缩放</span>
           </div>
 
@@ -286,14 +255,17 @@ export function TimelineChart(props: {
 
               const ratio = clampNumber((event.clientX - rect.left) / rect.width, 0, 1)
               const centerSec = ratio * DAY_SECONDS
-              const half = viewportDuration / 2
-              const next = clampWindow(centerSec - half, centerSec + half)
+              const next = clampWindow(
+                centerSec - visibleDuration / 2,
+                centerSec + visibleDuration / 2,
+                visibleDuration,
+              )
               props.onViewportChange(next.startSec, next.endSec)
             }}
           >
             <div className="timeline-overview-grid" />
 
-            {layout.overviewSegments.map((segment) => (
+            {overviewSegments.map((segment) => (
               <span
                 key={segment.id}
                 className="timeline-overview-segment"
@@ -311,8 +283,8 @@ export function TimelineChart(props: {
             <div
               className="timeline-overview-window"
               style={{
-                left: `${windowLeftPct}%`,
-                width: `${Math.max(windowWidthPct, 1.2)}%`,
+                left: `${(props.viewStartSec / DAY_SECONDS) * 100}%`,
+                width: `${Math.max((visibleDuration / DAY_SECONDS) * 100, 1.6)}%`,
               }}
               onPointerDown={(event) => beginOverviewDrag(event, 'move', props, dragStateRef)}
             >
@@ -323,8 +295,8 @@ export function TimelineChart(props: {
                   beginOverviewDrag(event, 'resize-start', props, dragStateRef)
                 }
               />
-              <div className="timeline-overview-window-body">
-                <span>{viewportLabel}</span>
+              <div className="timeline-overview-window-label">
+                {formatClock(props.viewStartSec)} - {formatClock(props.viewEndSec)}
               </div>
               <button
                 type="button"
@@ -338,7 +310,7 @@ export function TimelineChart(props: {
         </div>
       ) : null}
 
-      <div className="timeline-table-panel">
+      <div className="timeline-table">
         <div className="timeline-table-header">
           <span>名称</span>
           <span>类型</span>
@@ -348,107 +320,36 @@ export function TimelineChart(props: {
         </div>
 
         <div className="timeline-table-body">
-          {visibleTableItems.map((item) => (
+          {visibleItems.map((item) => (
             <button
               key={`${item.id}-row`}
               type="button"
               className={`timeline-table-row ${item.id === props.selectedSegmentId ? 'is-selected' : ''}`}
               onClick={() => {
-                props.onSelectSegment?.(item.segment)
+                props.onSelectSegment?.(item)
               }}
             >
               <span className="timeline-table-name">
                 <i style={{ backgroundColor: item.color }} />
                 {item.label}
               </span>
-              <span>{segmentTypeLabel(item.segment)}</span>
+              <span>{segmentTypeLabel(item)}</span>
               <span className="timeline-table-detail">{item.detail}</span>
-              <span>{formatClockRange(item.segment.startSec, item.segment.endSec)}</span>
-              <span>{formatDuration(item.segment.durationSec)}</span>
+              <span>{formatClockRange(item.startSec, item.endSec)}</span>
+              <span>{formatDuration(item.durationSec)}</span>
             </button>
           ))}
         </div>
       </div>
-    </div>
+    </section>
   )
 }
 
-function buildTimelineLayout(
-  rows: TimelineRow[],
-  baseMs: number,
-  selectedSegmentId?: string | null,
-) {
-  const groups: VisualGroup[] = []
-  const items: TimelineItem[] = []
-  const overviewSegments: OverviewSegment[] = []
-  const totalRows = Math.max(rows.length, 1)
-
-  rows.forEach((row, rowIndex) => {
-    const lanes = buildLanes(row.segments)
-    const laneCount = Math.max(lanes.length, 1)
-
-    if (lanes.length === 0) {
-      groups.push({
-        id: `${row.id}-lane-0`,
-        title: row.label,
-        rowId: row.id,
-        laneIndex: 0,
-        laneCount,
-        primary: true,
-      })
-    }
-
-    lanes.forEach((laneSegments, laneIndex) => {
-      const groupId = `${row.id}-lane-${laneIndex}`
-      groups.push({
-        id: groupId,
-        title: row.label,
-        rowId: row.id,
-        laneIndex,
-        laneCount,
-        primary: laneIndex === 0,
-      })
-
-      laneSegments.forEach((segment) => {
-        const shouldDim =
-          row.selectedKey !== null &&
-          row.selectedKey !== undefined &&
-          row.selectedKey !== segment.key
-
-        items.push({
-          id: segment.id,
-          group: groupId,
-          title: segment.label,
-          start_time: baseMs + segment.startSec * 1000,
-          end_time: baseMs + segment.endSec * 1000,
-          canMove: false,
-          canResize: false,
-          canChangeGroup: false,
-          className: buildItemClassName(shouldDim, selectedSegmentId === segment.id),
-          itemProps: {
-            title: buildTooltipText(segment),
-          },
-          segment,
-          label: segment.label,
-          detail: segment.detail,
-          opacity: shouldDim ? 0.22 : 0.98,
-          color: segment.color,
-        })
-
-        overviewSegments.push({
-          id: `${segment.id}-overview`,
-          leftPct: (segment.startSec / DAY_SECONDS) * 100,
-          widthPct: Math.max((segment.durationSec / DAY_SECONDS) * 100, 0.2),
-          topPct: (rowIndex / totalRows) * 100 + 10,
-          heightPct: 26 / totalRows,
-          color: segment.color,
-          opacity: shouldDim ? 0.18 : 0.88,
-        })
-      })
-    })
-  })
-
-  return { groups, items, overviewSegments }
+function buildRows(rows: TimelineRow[]): RowLayout[] {
+  return rows.map((row) => ({
+    ...row,
+    lanes: buildLanes(row.segments),
+  }))
 }
 
 function buildLanes(segments: ChartSegment[]) {
@@ -478,32 +379,70 @@ function buildLanes(segments: ChartSegment[]) {
     }
   }
 
-  return lanes
+  return lanes.length > 0 ? lanes : [[]]
 }
 
-function renderItem(props: TimelineItemRendererProps) {
-  const { item, itemContext, getItemProps } = props
-  const itemProps = getItemProps({
-    className: item.className,
-    style: {
-      background: item.color,
-      borderColor: itemContext.selected ? '#c3d0ff' : 'rgba(255, 255, 255, 0.16)',
-      color: '#ecf2ff',
-      borderRadius: 6,
-      borderWidth: itemContext.selected ? 1 : 1,
-      opacity: item.opacity,
-      boxShadow: itemContext.selected ? '0 0 0 1px rgba(195, 208, 255, 0.42)' : 'none',
-    },
-  })
+function buildTicks(viewStartSec: number, viewEndSec: number) {
+  const duration = viewEndSec - viewStartSec
+  const step = chooseTickStep(duration)
+  const first = Math.floor(viewStartSec / step) * step
+  const ticks: Array<{ seconds: number; label: string; positionPct: number }> = []
 
-  return (
-    <div {...itemProps}>
-      <div className="timeline-item-copy">
-        <span className="timeline-item-label">{item.label}</span>
-        <small className="timeline-item-detail">{item.detail}</small>
-      </div>
-    </div>
+  for (let value = first; value <= viewEndSec; value += step) {
+    const seconds = clampNumber(value, viewStartSec, viewEndSec)
+    ticks.push({
+      seconds,
+      label: formatTickLabel(seconds, duration),
+      positionPct: ((seconds - viewStartSec) / duration) * 100,
+    })
+  }
+
+  return ticks
+}
+
+function buildOverviewSegments(rows: RowLayout[]): OverviewSegment[] {
+  const totalRows = Math.max(rows.length, 1)
+
+  return rows.flatMap((row, rowIndex) =>
+    row.lanes.flatMap((lane, laneIndex) =>
+      lane.map((segment) => ({
+        id: `${segment.id}-overview`,
+        leftPct: (segment.startSec / DAY_SECONDS) * 100,
+        widthPct: Math.max((segment.durationSec / DAY_SECONDS) * 100, 0.2),
+        topPct: ((rowIndex + laneIndex / Math.max(row.lanes.length, 1)) / totalRows) * 100 + 6,
+        heightPct: 18 / totalRows,
+        color: segment.color,
+        opacity: 0.82,
+      })),
+    ),
   )
+}
+
+function buildVisibleItems(rows: RowLayout[], viewStartSec: number, viewEndSec: number) {
+  return rows
+    .flatMap((row) => row.lanes.flatMap((lane) => lane))
+    .filter((segment) => segment.endSec > viewStartSec && segment.startSec < viewEndSec)
+    .sort((left, right) => {
+      if (left.startSec !== right.startSec) {
+        return left.startSec - right.startSec
+      }
+
+      return right.durationSec - left.durationSec
+    })
+}
+
+function clipSegment(segment: ChartSegment, viewStartSec: number, viewEndSec: number) {
+  const startSec = Math.max(segment.startSec, viewStartSec)
+  const endSec = Math.min(segment.endSec, viewEndSec)
+
+  if (endSec <= startSec) {
+    return null
+  }
+
+  return {
+    startSec,
+    endSec,
+  }
 }
 
 function beginOverviewDrag(
@@ -525,49 +464,37 @@ function beginOverviewDrag(
   }
 }
 
-function buildVisibleTableItems(items: TimelineItem[], viewStartSec: number, viewEndSec: number) {
-  return items
-    .filter((item) => item.segment.endSec > viewStartSec && item.segment.startSec < viewEndSec)
-    .sort((left, right) => {
-      if (left.segment.startSec !== right.segment.startSec) {
-        return left.segment.startSec - right.segment.startSec
-      }
-
-      return right.segment.durationSec - left.segment.durationSec
-    })
-}
-
-function clampViewport(
-  startMs: number,
-  endMs: number,
-  baseMs: number,
-  minZoom: number,
-  maxZoom: number,
+function handleWheelZoom(
+  event: WheelEvent<HTMLDivElement>,
+  options: {
+    minZoomSec: number
+    maxZoomSec: number
+    viewStartSec: number
+    viewEndSec: number
+    onViewportChange?: (startSec: number, endSec: number) => void
+  },
 ) {
-  const dayStart = baseMs
-  const dayEnd = baseMs + DAY_SECONDS * 1000
-  const duration = Math.min(Math.max(endMs - startMs, minZoom), maxZoom)
-  let nextStart = startMs
-  let nextEnd = nextStart + duration
-
-  if (nextStart < dayStart) {
-    nextStart = dayStart
-    nextEnd = nextStart + duration
+  if (!options.onViewportChange) {
+    return
   }
 
-  if (nextEnd > dayEnd) {
-    nextEnd = dayEnd
-    nextStart = nextEnd - duration
-  }
-
-  return {
-    startMs: Math.max(dayStart, nextStart),
-    endMs: Math.min(dayEnd, nextEnd),
-  }
+  event.preventDefault()
+  const rect = event.currentTarget.getBoundingClientRect()
+  const ratio = clampNumber((event.clientX - rect.left) / rect.width, 0, 1)
+  const currentDuration = options.viewEndSec - options.viewStartSec
+  const factor = event.deltaY > 0 ? 1.14 : 0.86
+  const nextDuration = clampNumber(
+    snapToStep(currentDuration * factor),
+    options.minZoomSec,
+    options.maxZoomSec,
+  )
+  const anchorSec = options.viewStartSec + ratio * currentDuration
+  const nextStart = anchorSec - ratio * nextDuration
+  const next = clampWindow(nextStart, nextStart + nextDuration, nextDuration)
+  options.onViewportChange(next.startSec, next.endSec)
 }
 
-function clampWindow(startSec: number, endSec: number) {
-  const duration = endSec - startSec
+function clampWindow(startSec: number, endSec: number, duration: number) {
   let nextStart = startSec
   let nextEnd = endSec
 
@@ -587,15 +514,51 @@ function clampWindow(startSec: number, endSec: number) {
   }
 }
 
-function findSegmentById(items: TimelineItem[], itemId: Id) {
-  const match = items.find((item) => item.id === itemId)
-  return match?.segment ?? null
+function chooseTickStep(duration: number) {
+  if (duration <= 15 * 60) {
+    return 60
+  }
+  if (duration <= 60 * 60) {
+    return 5 * 60
+  }
+  if (duration <= 2 * 60 * 60) {
+    return 15 * 60
+  }
+  if (duration <= 8 * 60 * 60) {
+    return 60 * 60
+  }
+  return 2 * 60 * 60
 }
 
-function buildItemClassName(isDimmed: boolean, isSelected: boolean) {
-  return ['timeline-item', isDimmed ? 'is-dimmed' : '', isSelected ? 'is-selected' : '']
-    .filter(Boolean)
-    .join(' ')
+function formatTickLabel(seconds: number, duration: number) {
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  const secs = Math.floor(seconds % 60)
+
+  if (duration <= 15 * 60) {
+    return `${pad(hours)}:${pad(minutes)}:${pad(secs)}`
+  }
+
+  return `${pad(hours)}:${pad(minutes)}`
+}
+
+function formatClock(seconds: number) {
+  const clamped = clampNumber(seconds, 0, DAY_SECONDS)
+  const hours = Math.floor(clamped / 3600)
+  const minutes = Math.floor((clamped % 3600) / 60)
+  return `${pad(hours)}:${pad(minutes)}`
+}
+
+function pad(value: number) {
+  return `${value}`.padStart(2, '0')
+}
+
+function snapToStep(seconds: number) {
+  return Math.round(seconds / SNAP_SECONDS) * SNAP_SECONDS
+}
+
+function clampNumber(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(value, max))
 }
 
 function buildTooltipText(segment: ChartSegment) {
@@ -605,26 +568,6 @@ function buildTooltipText(segment: ChartSegment) {
     formatClockRange(segment.startSec, segment.endSec),
     formatDuration(segment.durationSec),
   ].join('\n')
-}
-
-function toLocalMidnightMs(dateText: string) {
-  const date = new Date(`${dateText}T00:00:00`)
-  return date.getTime()
-}
-
-function formatClock(seconds: number) {
-  const clamped = clampNumber(seconds, 0, DAY_SECONDS)
-  const hours = Math.floor(clamped / 3600)
-  const minutes = Math.floor((clamped % 3600) / 60)
-  return `${`${hours}`.padStart(2, '0')}:${`${minutes}`.padStart(2, '0')}`
-}
-
-function snapToStep(seconds: number) {
-  return Math.round(seconds / SNAP_SECONDS) * SNAP_SECONDS
-}
-
-function clampNumber(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(value, max))
 }
 
 function segmentTypeLabel(segment: ChartSegment) {
