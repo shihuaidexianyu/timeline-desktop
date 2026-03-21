@@ -91,22 +91,21 @@ async function reportFocusedWindowTab(reason) {
     return
   }
 
-  let tab = activeTabsByWindow.get(focusedWindowId) ?? null
-  if (!tab) {
-    const [currentTab] = await chrome.tabs.query({
-      active: true,
-      windowId: focusedWindowId,
-    })
+  const [currentTab] = await chrome.tabs.query({
+    active: true,
+    windowId: focusedWindowId,
+  })
 
-    if (!currentTab) {
-      return
-    }
-
+  if (currentTab) {
     cacheActiveTab(currentTab)
-    tab = currentTab
+    await reportTab(currentTab, reason)
+    return
   }
 
-  await reportTab(tab, reason)
+  const cachedTab = activeTabsByWindow.get(focusedWindowId) ?? null
+  if (cachedTab) {
+    await reportTab(cachedTab, reason)
+  }
 }
 
 async function reportTab(tab, reason) {
@@ -116,13 +115,22 @@ async function reportTab(tab, reason) {
   }
 
   try {
-    await fetch(`${AGENT_BASE_URL}/api/events/browser`, {
+    const response = await fetch(`${AGENT_BASE_URL}/api/events/browser`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),
     })
+
+    const result = await response.json().catch(() => null)
+    if (!response.ok || !result?.ok || result.data?.accepted === false) {
+      console.warn(`timeline browser bridge rejected event: ${reason}`, {
+        payload,
+        status: response.status,
+        result,
+      })
+    }
   } catch (error) {
     console.warn(`timeline browser bridge skipped event: ${reason}`, error)
   }
