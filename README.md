@@ -2,6 +2,7 @@
 
 ![timeline screenshot 1](assets/1.png)
 ![timeline screenshot 2](assets/2.png)
+![timeline screenshot 2](assets/3.png)
 
 一个面向 Windows 的本地个人活动时间线工具。
 
