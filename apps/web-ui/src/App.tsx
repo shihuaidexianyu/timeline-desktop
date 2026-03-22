@@ -464,13 +464,8 @@ function StatsPage(props: {
   onCalendarMonthChange: (month: string) => void
   onSelectDate: (date: string) => void
 }) {
-  const selectedSummary =
-    props.monthCalendar?.days.find((day) => day.date === props.selectedDate) ?? null
   const weekBars = buildWeekSeries(props.monthCalendar?.days ?? [], props.selectedDate)
   const topApps = props.dashboard.appSlices.filter((slice) => slice.key !== 'others').slice(0, 5)
-  const topDomains = props.dashboard.domainSlices
-    .filter((slice) => slice.key !== 'others')
-    .slice(0, 3)
   const presenceByKey = new Map(
     props.dashboard.presenceSlices.map((slice) => [slice.key, slice.value]),
   )
@@ -479,15 +474,6 @@ function StatsPage(props: {
   return (
     <section className="page-stack">
       <section className="stats-overview-grid">
-        <DailySnapshotCard
-          selectedDate={props.selectedDate}
-          selectedSummary={selectedSummary}
-          dashboard={props.dashboard}
-          topDomains={topDomains}
-          appFilter={props.appFilter}
-          refreshing={props.isTimelineRefreshing}
-          onSelectApp={props.setAppFilter}
-        />
         <WeeklyRhythmCard
           periodSummary={props.periodSummary}
           weekBars={weekBars}
@@ -570,101 +556,6 @@ function StatsPage(props: {
         </div>
       </section>
     </section>
-  )
-}
-
-function DailySnapshotCard(props: {
-  selectedDate: string
-  selectedSummary: DaySummary | null
-  dashboard: DashboardModel
-  topDomains: DonutSlice[]
-  appFilter: DashboardFilter
-  refreshing: boolean
-  onSelectApp: (value: DashboardFilter) => void
-}) {
-  const appSlices = props.dashboard.appSlices.filter((slice) => slice.key !== 'others').slice(0, 4)
-  const topApp = appSlices[0] ?? null
-  const topDomain = props.topDomains[0] ?? null
-
-  return (
-    <article className="showcase-card showcase-card-daily">
-      <div className="showcase-card-head">
-        <div>
-          <p className="section-kicker">今日概览</p>
-          <h2>{formatDateHeading(props.selectedDate)}</h2>
-        </div>
-        <div className="card-head-side">
-          <RefreshBadge active={props.refreshing} />
-          <span className="showcase-avatar">{props.selectedDate.slice(8, 10)}</span>
-        </div>
-      </div>
-
-      <p className="showcase-copy">
-        先把这一天最重要的结果看完，再决定是否深入到应用分布、域名或时间线。
-      </p>
-
-      <div className="showcase-donut-wrap">
-        <div className="showcase-compact-donut">
-          <CompactDonutChart
-            slices={appSlices}
-            totalLabel={formatDuration(props.dashboard.summary.activeSeconds)}
-            secondaryLabel="活跃时长"
-            selectedKey={props.appFilter?.kind === 'app' ? props.appFilter.key : null}
-            onSelectKey={(key) => {
-              props.onSelectApp(
-                props.appFilter?.kind === 'app' && props.appFilter.key === key
-                  ? null
-                  : { kind: 'app', key },
-              )
-            }}
-            height={200}
-            emptyLabel="所选日期没有可展示的应用分布"
-          />
-        </div>
-      </div>
-
-      <div className="showcase-stat-grid">
-        <div className="showcase-stat-pill">
-          <span>应用数</span>
-          <strong>{props.dashboard.meta.focusCount}</strong>
-        </div>
-        <div className="showcase-stat-pill">
-          <span>切换次数</span>
-          <strong>{props.dashboard.summary.switchCount}</strong>
-        </div>
-      </div>
-
-      <div className="showcase-tag-list">
-        {topApp ? (
-          <button
-            type="button"
-            className={`showcase-tag ${props.appFilter?.kind === 'app' && props.appFilter.key === topApp.key ? 'is-selected' : ''}`}
-            onClick={() => {
-              props.onSelectApp(
-                props.appFilter?.kind === 'app' && props.appFilter.key === topApp.key
-                  ? null
-                  : { kind: 'app', key: topApp.key },
-              )
-            }}
-          >
-            主应用
-            <strong>{topApp.label}</strong>
-          </button>
-        ) : null}
-        {topDomain ? (
-          <span className="showcase-tag">
-            主域名
-            <strong>{topDomain.label}</strong>
-          </span>
-        ) : null}
-        {props.selectedSummary?.switch_count ? (
-          <span className="showcase-tag">
-            切换次数
-            <strong>{props.selectedSummary.switch_count} 次</strong>
-          </span>
-        ) : null}
-      </div>
-    </article>
   )
 }
 
@@ -1604,11 +1495,6 @@ function buildWeekSeries(days: DaySummary[], selectedDate: string): WeekBarDatum
       isSelected: dateKey === selectedDate,
     }
   })
-}
-
-function formatDateHeading(date: string) {
-  const parsed = parseDateString(date)
-  return `${parsed.getUTCFullYear()} / ${String(parsed.getUTCMonth() + 1).padStart(2, '0')} / ${String(parsed.getUTCDate()).padStart(2, '0')}`
 }
 
 function formatPercent(value: number) {
