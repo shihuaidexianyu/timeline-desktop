@@ -48,8 +48,7 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   const [settingsError, setSettingsError] = useState<string | null>(null)
   const [savingAutostart, setSavingAutostart] = useState(false)
-  const [activeOnly, setActiveOnly] = useState(false)
-  const [refreshToken, setRefreshToken] = useState(0)
+  const activeOnly = false
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null)
   const [appFilter, setAppFilter] = useState<DashboardFilter>(null)
   const [domainFilter, setDomainFilter] = useState<DashboardFilter>(null)
@@ -102,7 +101,7 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [selectedDate, refreshToken])
+  }, [selectedDate])
 
   useEffect(() => {
     let cancelled = false
@@ -117,7 +116,7 @@ function App() {
         }
       })
     return () => { cancelled = true }
-  }, [calendarMonth, refreshToken])
+  }, [calendarMonth])
 
   useEffect(() => {
     setViewStartHour((current) => clampViewStart(current, zoomHours))
@@ -202,60 +201,6 @@ function App() {
             </span>
           </div>
         </header>
-
-        <section className="topbar-panel">
-          <div className="toolbar-grid">
-            <label className="field-card">
-              <span>日期</span>
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(event) => {
-                  const nextDate = event.target.value
-                  const nextWindow = defaultTimelineViewport(nextDate)
-                  startTransition(() => {
-                    setSelectedDate(nextDate)
-                    setZoomHours(nextWindow.zoomHours)
-                    setViewStartHour(nextWindow.viewStartHour)
-                  })
-                }}
-              />
-            </label>
-
-            <label className="toggle-card">
-              <span>仅活跃时段</span>
-              <button
-                type="button"
-                className={`toggle-button ${activeOnly ? 'is-active' : ''}`}
-                onClick={() => {
-                  setActiveOnly((value) => !value)
-                  setDomainFilter(null)
-                  setSelectedBrowserSegmentId(null)
-                }}
-              >
-                {activeOnly ? '开启' : '关闭'}
-              </button>
-            </label>
-
-            <button
-              type="button"
-              className="action-button"
-              onClick={() => {
-                setRefreshToken((value) => value + 1)
-              }}
-            >
-              刷新数据
-            </button>
-
-            <div className="status-card">
-              <span>连接状态</span>
-              <strong className={error ? 'status-error' : 'status-ok'}>
-                {error ? '服务离线' : '服务在线'}
-              </strong>
-              <small>{lastUpdatedAt ? `${lastUpdatedAt} 更新` : '等待连接'}</small>
-            </div>
-          </div>
-        </section>
 
         {loading ? <LoadingState /> : null}
         {error ? <ErrorState error={error} /> : null}
