@@ -94,35 +94,16 @@ impl AppConfig {
     /// Searches common locations for the built web-ui `dist/` directory.
     ///
     /// Priority order:
-    ///   1. Paths relative to CWD (`apps/web-ui/dist`, `web-ui/dist`, `dist`).
-    ///   2. Paths relative to the running executable and its parent directories.
+    ///   1. Paths relative to the running executable and its parent directories.
+    ///   2. Paths relative to CWD (`apps/web-ui/dist`, `web-ui/dist`, `dist`).
     ///
     /// Returns the first candidate containing `index.html`, or `None` if the
     /// frontend hasn't been built yet.
     pub fn web_ui_dist_dir(&self) -> Option<PathBuf> {
-        let mut candidates = vec![
-            PathBuf::from("apps/web-ui/dist"),
-            PathBuf::from("web-ui/dist"),
-            PathBuf::from("dist"),
-        ];
+        let current_dir = std::env::current_dir().ok();
+        let current_exe = std::env::current_exe().ok();
 
-        if let Ok(current_exe) = std::env::current_exe()
-            && let Some(exe_dir) = current_exe.parent()
-        {
-            candidates.push(exe_dir.join("web-ui/dist"));
-            candidates.push(exe_dir.join("dist"));
-
-            if let Some(parent) = exe_dir.parent() {
-                candidates.push(parent.join("web-ui/dist"));
-                candidates.push(parent.join("dist"));
-
-                if let Some(grandparent) = parent.parent() {
-                    candidates.push(grandparent.join("apps/web-ui/dist"));
-                }
-            }
-        }
-
-        candidates
+        web_ui_dist_candidates(current_dir.as_deref(), current_exe.as_deref())
             .into_iter()
             .find(|dir| dir.join("index.html").is_file())
     }
@@ -222,6 +203,38 @@ fn parent_candidates(base: &Path) -> Vec<PathBuf> {
     candidates
 }
 
+fn web_ui_dist_candidates(current_dir: Option<&Path>, current_exe: Option<&Path>) -> Vec<PathBuf> {
+    let mut candidates = Vec::new();
+
+    if let Some(exe_dir) = current_exe.and_then(Path::parent) {
+        push_unique(&mut candidates, exe_dir.join("web-ui/dist"));
+        push_unique(&mut candidates, exe_dir.join("dist"));
+
+        if let Some(parent) = exe_dir.parent() {
+            push_unique(&mut candidates, parent.join("web-ui/dist"));
+            push_unique(&mut candidates, parent.join("dist"));
+
+            if let Some(grandparent) = parent.parent() {
+                push_unique(&mut candidates, grandparent.join("apps/web-ui/dist"));
+            }
+        }
+    }
+
+    if let Some(current_dir) = current_dir {
+        push_unique(&mut candidates, current_dir.join("apps/web-ui/dist"));
+        push_unique(&mut candidates, current_dir.join("web-ui/dist"));
+        push_unique(&mut candidates, current_dir.join("dist"));
+    }
+
+    candidates
+}
+
+fn push_unique(candidates: &mut Vec<PathBuf>, path: PathBuf) {
+    if !candidates.contains(&path) {
+        candidates.push(path);
+    }
+}
+
 fn looks_like_runtime_root(path: &Path) -> bool {
     path.join(DEFAULT_CONFIG_PATH).is_file()
         || path.join("Cargo.toml").is_file()
@@ -247,7 +260,7 @@ fn absolutize_from(base: PathBuf, path: PathBuf) -> Result<PathBuf> {
 
 #[cfg(test)]
 mod tests {
-    use super::{AppConfig, parent_candidates, resolve_path};
+    use super::{AppConfig, parent_candidates, resolve_path, web_ui_dist_candidates};
     use std::path::{Path, PathBuf};
 
     #[test]
@@ -293,6 +306,48 @@ mod tests {
                 Path::new(r"..\data\timeline.sqlite"),
             ),
             PathBuf::from(r"C:\Timeline\config\..\data\timeline.sqlite")
+        );
+    }
+
+    #[test]
+    fn prefers_packaged_web_ui_before_working_directory() {
+        let candidates = web_ui_dist_candidates(
+            Some(Path::new(r"C:\Users\me\repo")),
+            Some(Path::new(r"D:\Timeline\timeline-agent.exe")),
+        );
+
+        assert_eq!(
+            candidates,
+            vec![
+                PathBuf::from(r"D:\Timeline\web-ui\dist"),
+                PathBuf::from(r"D:\Timeline\dist"),
+                PathBuf::from(r"D:\web-ui\dist"),
+                PathBuf::from(r"D:\dist"),
+                PathBuf::from(r"C:\Users\me\repo\apps\web-ui\dist"),
+                PathBuf::from(r"C:\Users\me\repo\web-ui\dist"),
+                PathBuf::from(r"C:\Users\me\repo\dist"),
+            ]
+        );
+    }
+
+    #[test]
+    fn still_discovers_repo_dist_for_dev_binaries() {
+        let candidates = web_ui_dist_candidates(
+            Some(Path::new(r"C:\Users\me\repo")),
+            Some(Path::new(r"C:\Users\me\repo\target\release\timeline-agent.exe")),
+        );
+
+        assert_eq!(
+            candidates,
+            vec![
+                PathBuf::from(r"C:\Users\me\repo\target\release\web-ui\dist"),
+                PathBuf::from(r"C:\Users\me\repo\target\release\dist"),
+                PathBuf::from(r"C:\Users\me\repo\target\web-ui\dist"),
+                PathBuf::from(r"C:\Users\me\repo\target\dist"),
+                PathBuf::from(r"C:\Users\me\repo\apps\web-ui\dist"),
+                PathBuf::from(r"C:\Users\me\repo\web-ui\dist"),
+                PathBuf::from(r"C:\Users\me\repo\dist"),
+            ]
         );
     }
 }

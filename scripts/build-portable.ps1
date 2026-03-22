@@ -36,6 +36,17 @@ function Copy-DirectoryContents {
     Copy-Item -Path (Join-Path $Source '*') -Destination $Destination -Recurse -Force
 }
 
+function Remove-PathIfExists {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    if (Test-Path $Path) {
+        Remove-Item -Path $Path -Recurse -Force
+    }
+}
+
 $repoRoot = Get-RepoRoot
 $webUiDir = Join-Path $repoRoot 'apps\web-ui'
 $extensionDir = Join-Path $repoRoot 'apps\browser-extension'
@@ -53,6 +64,20 @@ if ([string]::IsNullOrWhiteSpace($packageVersion)) {
 if (-not $SkipBuild) {
     Require-Command -Name 'cargo' | Out-Null
     Require-Command -Name 'npm' | Out-Null
+
+    Write-Host 'Cleaning previous build outputs...' -ForegroundColor Cyan
+    Remove-PathIfExists -Path (Join-Path $webUiDir 'dist')
+    Remove-PathIfExists -Path (Join-Path $webUiDir 'node_modules\.vite')
+    Remove-PathIfExists -Path (Join-Path $webUiDir 'node_modules\.vite-temp')
+    Remove-PathIfExists -Path (Join-Path $webUiDir 'node_modules\.tmp')
+
+    Push-Location $repoRoot
+    try {
+        & cargo clean
+    }
+    finally {
+        Pop-Location
+    }
 
     Write-Host 'Building web-ui...' -ForegroundColor Cyan
     Push-Location $webUiDir
