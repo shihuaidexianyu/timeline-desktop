@@ -74,14 +74,15 @@ export function TimelineChart(props: {
   const [hoveredSec, setHoveredSec] = useState<number | null>(null)
   const [hoveredAxisLeftPx, setHoveredAxisLeftPx] = useState<number | null>(null)
   const [hoveredLaneLeftPx, setHoveredLaneLeftPx] = useState<number | null>(null)
+  const [axisTrackWidth, setAxisTrackWidth] = useState(0)
   const minZoomSec = Math.round((props.minViewHours ?? 1 / 12) * 3600)
   const maxZoomSec = Math.round((props.maxViewHours ?? 24) * 3600)
   const visibleDuration = props.viewEndSec - props.viewStartSec
 
   const layout = useMemo(() => buildRows(props.rows), [props.rows])
   const ticks = useMemo(
-    () => buildTicks(props.viewStartSec, props.viewEndSec),
-    [props.viewEndSec, props.viewStartSec],
+    () => buildTicks(props.viewStartSec, props.viewEndSec, axisTrackWidth),
+    [axisTrackWidth, props.viewEndSec, props.viewStartSec],
   )
   const overviewSegments = useMemo(() => buildOverviewSegments(layout), [layout])
   const visibleItems = useMemo(
@@ -92,6 +93,29 @@ export function TimelineChart(props: {
     () => (hoveredSec === null ? [] : buildInspectionItems(layout, hoveredSec)),
     [hoveredSec, layout],
   )
+
+  useEffect(() => {
+    const track = axisTrackRef.current
+    if (!track) {
+      return
+    }
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      const entry = entries[0]
+      if (!entry) {
+        return
+      }
+
+      setAxisTrackWidth(entry.contentRect.width)
+    })
+
+    resizeObserver.observe(track)
+    setAxisTrackWidth(track.getBoundingClientRect().width)
+
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [])
 
   useEffect(() => {
     function handlePointerMove(event: PointerEvent) {
@@ -512,17 +536,27 @@ function buildLanes(segments: ChartSegment[]) {
   return lanes.length > 0 ? lanes : [[]]
 }
 
-function buildTicks(viewStartSec: number, viewEndSec: number) {
+function buildTicks(viewStartSec: number, viewEndSec: number, trackWidth: number) {
   const duration = viewEndSec - viewStartSec
-  const step = chooseTickStep(duration)
-  const first = Math.floor(viewStartSec / step) * step
+  const step = chooseTickStep(duration, trackWidth)
+  const first = Math.ceil(viewStartSec / step) * step
   const ticks: Array<{ seconds: number; label: string; positionPct: number }> = []
+
+  ticks.push({
+    seconds: viewStartSec,
+    label: formatTickLabel(viewStartSec, step),
+    positionPct: 0,
+  })
 
   for (let value = first; value <= viewEndSec; value += step) {
     const seconds = clampNumber(value, viewStartSec, viewEndSec)
+    if (seconds <= viewStartSec || seconds >= viewEndSec) {
+      continue
+    }
+
     ticks.push({
       seconds,
-      label: formatTickLabel(seconds, duration),
+      label: formatTickLabel(seconds, step),
       positionPct: ((seconds - viewStartSec) / duration) * 100,
     })
   }
@@ -711,30 +745,37 @@ function clampWindow(startSec: number, endSec: number, duration: number) {
   }
 }
 
-/** Picks a tick interval that yields ~4-8 visible ticks for the given duration. */
-function chooseTickStep(duration: number) {
-  if (duration <= 15 * 60) {        // ≤15min → tick every 1 min
-    return 60
+/** Picks a tick interval based on both visible duration and available width. */
+function chooseTickStep(duration: number, trackWidth: number) {
+  const preferredLabelSpacingPx = 88
+  const maxTickCount = Math.max(2, Math.floor((trackWidth || 640) / preferredLabelSpacingPx))
+  const candidateSteps = [
+    60,
+    5 * 60,
+    10 * 60,
+    15 * 60,
+    30 * 60,
+    60 * 60,
+    2 * 60 * 60,
+    4 * 60 * 60,
+    6 * 60 * 60,
+  ]
+
+  for (const step of candidateSteps) {
+    if (duration / step <= maxTickCount) {
+      return step
+    }
   }
-  if (duration <= 60 * 60) {        // ≤1h → tick every 5 min
-    return 5 * 60
-  }
-  if (duration <= 2 * 60 * 60) {    // ≤2h → tick every 15 min
-    return 15 * 60
-  }
-  if (duration <= 8 * 60 * 60) {    // ≤8h → tick every 1h
-    return 60 * 60
-  }
-  return 2 * 60 * 60               // >8h → tick every 2h
+
+  return 8 * 60 * 60
 }
 
-function formatTickLabel(seconds: number, duration: number) {
+function formatTickLabel(seconds: number, step: number) {
   const hours = Math.floor(seconds / 3600)
   const minutes = Math.floor((seconds % 3600) / 60)
-  const secs = Math.floor(seconds % 60)
 
-  if (duration <= 15 * 60) {
-    return `${pad(hours)}:${pad(minutes)}:${pad(secs)}`
+  if (step >= 60 * 60 && minutes === 0) {
+    return `${pad(hours)}:00`
   }
 
   return `${pad(hours)}:${pad(minutes)}`

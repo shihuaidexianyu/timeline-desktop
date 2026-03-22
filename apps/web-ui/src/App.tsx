@@ -800,19 +800,11 @@ function TimelinePage(props: {
   const timelineRows = useMemo(
     () => [
       {
-        id: 'focus-overview',
-        label: '应用总览',
-        segments: props.dashboard.focusSegments,
-        selectedKey: props.appFilter?.key ?? null,
-        splitByKey: false,
-        includeInOverview: false,
-        includeInTable: false,
-      },
-      {
         id: 'focus',
         label: '应用',
         segments: props.dashboard.focusSegments,
         selectedKey: props.appFilter?.key ?? null,
+        splitByKey: false,
       },
       {
         id: 'presence',
@@ -1159,6 +1151,7 @@ function pageMeta(page: AppPage) {
     return {
       kicker: '时间线',
       title: '时间线',
+      description: '查看当前窗口内的事件分布与进程记录。',
     }
   }
 
@@ -1166,12 +1159,14 @@ function pageMeta(page: AppPage) {
     return {
       kicker: '设置',
       title: '本地设置',
+      description: '查看当前连接、本地采集范围和运行配置。',
     }
   }
 
   return {
     kicker: '统计',
     title: '统计概览',
+    description: '按天查看应用使用、状态分布和周期变化。',
   }
 }
 
