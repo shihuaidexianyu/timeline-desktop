@@ -450,7 +450,6 @@ function StatsPage(props: {
   onSelectDate: (date: string) => void
 }) {
   const weekBars = buildWeekSeries(props.monthCalendar?.days ?? [], props.selectedDate)
-  const topApps = props.dashboard.appSlices.filter((slice) => slice.key !== 'others').slice(0, 5)
   const presenceByKey = new Map(
     props.dashboard.presenceSlices.map((slice) => [slice.key, slice.value]),
   )
@@ -462,11 +461,8 @@ function StatsPage(props: {
         <WeeklyRhythmCard
           periodSummary={props.periodSummary}
           weekBars={weekBars}
-          topApps={topApps}
           isCurrentDate={isCurrentDate}
-          appFilter={props.appFilter}
           refreshing={props.isPeriodRefreshing}
-          onSelectApp={props.setAppFilter}
           onSelectDate={props.onSelectDate}
         />
         <FocusBalanceCard
@@ -547,11 +543,8 @@ function StatsPage(props: {
 function WeeklyRhythmCard(props: {
   periodSummary: PeriodSummaryResponse | null
   weekBars: WeekBarDatum[]
-  topApps: DonutSlice[]
   isCurrentDate: boolean
-  appFilter: DashboardFilter
   refreshing: boolean
-  onSelectApp: (value: DashboardFilter) => void
   onSelectDate: (date: string) => void
 }) {
   const [selectedMetric, setSelectedMetric] = useState<'active' | 'focus'>('active')
@@ -623,39 +616,6 @@ function WeeklyRhythmCard(props: {
           <small>点击柱子切换日期</small>
         </div>
       ) : null}
-
-      <div className="mini-list-card">
-        <div className="mini-list-head">
-          <span>重点查看</span>
-          <strong>应用排行</strong>
-        </div>
-        <div className="mini-usage-list">
-          {props.topApps.length === 0 ? (
-            <div className="empty-card">所选日期没有应用记录</div>
-          ) : (
-            props.topApps.map((slice) => (
-              <button
-                key={slice.id}
-                type="button"
-                className={`mini-usage-row ${props.appFilter?.kind === 'app' && props.appFilter.key === slice.key ? 'is-selected' : ''}`}
-                onClick={() => {
-                  props.onSelectApp(
-                    props.appFilter?.kind === 'app' && props.appFilter.key === slice.key
-                      ? null
-                      : { kind: 'app', key: slice.key },
-                  )
-                }}
-              >
-                <span className="mini-usage-name">
-                  <i style={{ backgroundColor: slice.color }} />
-                  {slice.label}
-                </span>
-                <span>{formatDuration(slice.value)}</span>
-              </button>
-            ))
-          )}
-        </div>
-      </div>
     </article>
   )
 }

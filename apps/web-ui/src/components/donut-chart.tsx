@@ -13,8 +13,8 @@ import {
 const LABEL_COLOR = '#1d2c43'
 const MUTED_COLOR = '#6f839f'
 const MONO_FAMILY = '"IBM Plex Mono", "SFMono-Regular", Consolas, monospace'
-const PIE_CENTER_X = '28%'
-const LEGEND_WIDTH = 132
+const PIE_CENTER_X = '24%'
+const LEGEND_WIDTH = 148
 
 export function DonutChart(props: {
   title: string
@@ -26,6 +26,10 @@ export function DonutChart(props: {
 }) {
   /** Show at most 5 slices in the legend; group the rest as "Others". */
   const displaySlices = useMemo(() => collapseSlices(props.slices, 5), [props.slices])
+  const rankingSlices = useMemo(
+    () => props.slices.filter((slice) => slice.key !== 'others').slice(0, 5),
+    [props.slices],
+  )
   const sliceByLabel = useMemo(
     () => new Map(displaySlices.map((slice) => [slice.label, slice])),
     [displaySlices],
@@ -63,7 +67,7 @@ export function DonutChart(props: {
         data: displaySlices.map((slice) => slice.label),
         orient: 'vertical',
         top: 'middle',
-        right: 10,
+        right: 2,
         width: LEGEND_WIDTH,
         icon: 'circle',
         selectedMode: false,
@@ -156,8 +160,8 @@ export function DonutChart(props: {
         {
           name: props.title,
           type: 'pie',
-          radius: ['54%', '74%'],
-          center: [PIE_CENTER_X, '50%'],
+          radius: ['50%', '68%'],
+          center: [PIE_CENTER_X, '48%'],
           avoidLabelOverlap: true,
           label: { show: false },
           labelLine: { show: false },
@@ -230,13 +234,6 @@ export function DonutChart(props: {
 
   return (
     <div className="donut-card">
-      <div className="panel-header">
-        <div>
-          <p className="section-kicker">{props.filterKind === 'app' ? '应用' : '域名'}</p>
-          <h2>{props.title}</h2>
-        </div>
-      </div>
-
       <ReactECharts
         option={option}
         notMerge
@@ -253,8 +250,30 @@ export function DonutChart(props: {
             props.onSelect(isActive ? null : { kind: props.filterKind, key: slice.key })
           },
         }}
-        style={{ height: 272, width: '100%', paddingInline: 8 }}
+        style={{ height: 288, width: '100%', paddingInline: 14 }}
       />
+
+      <div className="ranking-list">
+        {rankingSlices.map((slice) => {
+          const isActive = isFilterActive(props.filter, props.filterKind, slice.key)
+
+          return (
+            <button
+              key={`ranking-${slice.id}`}
+              type="button"
+              className="ranking-row"
+              onClick={() => props.onSelect(isActive ? null : { kind: props.filterKind, key: slice.key })}
+            >
+              <span className="ranking-name">
+                <i style={{ backgroundColor: slice.color }} />
+                {slice.label}
+              </span>
+              <span>{formatDuration(slice.value)}</span>
+              <span>{slice.percentage.toFixed(1)}%</span>
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }

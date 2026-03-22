@@ -1651,13 +1651,39 @@
 .donut-card {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 12px;
 }
 
 .donut-card .echarts-for-react {
   border: 1px solid rgba(145, 159, 180, 0.2);
   border-radius: 12px;
   background: #fff;
+}
+
+.donut-card .ranking-list {
+  margin-top: 2px;
+}
+
+.donut-card .ranking-row {
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.donut-card .ranking-row:hover {
+  background: rgba(240, 245, 255, 0.64);
+}
+
+.donut-card .ranking-row:focus-visible {
+  outline: none;
+  border-radius: 10px;
+  box-shadow: 0 0 0 3px rgba(47, 111, 219, 0.18);
 }
 
 .chart-tooltip {
