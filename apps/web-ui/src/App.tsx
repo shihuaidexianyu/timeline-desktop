@@ -5,11 +5,16 @@ import './App.css'
 import {
   API_BASE_URL,
   getAgentSettings,
+  getMonthCalendar,
+  getPeriodSummary,
   getTimeline,
   updateAutostart,
   type AgentSettingsResponse,
+  type MonthCalendarResponse,
+  type PeriodSummaryResponse,
   type TimelineDayResponse,
 } from './api'
+import { CalendarGrid } from './components/calendar-grid'
 import { DonutChart } from './components/donut-chart'
 import { TimelineChart } from './components/timeline-chart'
 import {
@@ -50,6 +55,9 @@ function App() {
   const [selectedBrowserSegmentId, setSelectedBrowserSegmentId] = useState<string | null>(null)
   const [zoomHours, setZoomHours] = useState<number>(defaultTimelineWindow.zoomHours)
   const [viewStartHour, setViewStartHour] = useState(defaultTimelineWindow.viewStartHour)
+  const [periodSummary, setPeriodSummary] = useState<PeriodSummaryResponse | null>(null)
+  const [calendarMonth, setCalendarMonth] = useState(() => monthFromDate(todayString()))
+  const [monthCalendar, setMonthCalendar] = useState<MonthCalendarResponse | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -59,9 +67,10 @@ function App() {
       setError(null)
 
       try {
-        const [nextTimeline, nextSettings] = await Promise.all([
+        const [nextTimeline, nextSettings, nextPeriod] = await Promise.all([
           getTimeline(selectedDate),
           getAgentSettings(),
+          getPeriodSummary(selectedDate),
         ])
         if (cancelled) {
           return
@@ -69,6 +78,7 @@ function App() {
 
         setTimeline(nextTimeline)
         setAgentSettings(nextSettings)
+        setPeriodSummary(nextPeriod)
         setSettingsError(null)
         setLastUpdatedAt(new Date().toLocaleTimeString())
       } catch (loadError) {
@@ -92,6 +102,14 @@ function App() {
       cancelled = true
     }
   }, [selectedDate, refreshToken])
+
+  useEffect(() => {
+    let cancelled = false
+    void getMonthCalendar(calendarMonth).then((data) => {
+      if (!cancelled) setMonthCalendar(data)
+    })
+    return () => { cancelled = true }
+  }, [calendarMonth, refreshToken])
 
   useEffect(() => {
     setViewStartHour((current) => clampViewStart(current, zoomHours))
@@ -247,6 +265,19 @@ function App() {
                 domainFilter={domainFilter}
                 setAppFilter={setAppFilter}
                 setDomainFilter={setDomainFilter}
+                periodSummary={periodSummary}
+                monthCalendar={monthCalendar}
+                calendarMonth={calendarMonth}
+                selectedDate={selectedDate}
+                onCalendarMonthChange={setCalendarMonth}
+                onSelectDate={(date) => {
+                  const nextWindow = defaultTimelineViewport(date)
+                  startTransition(() => {
+                    setSelectedDate(date)
+                    setZoomHours(nextWindow.zoomHours)
+                    setViewStartHour(nextWindow.viewStartHour)
+                  })
+                }}
               />
             ) : null}
 
@@ -319,15 +350,59 @@ function StatsPage(props: {
   domainFilter: DashboardFilter
   setAppFilter: (value: DashboardFilter) => void
   setDomainFilter: (value: DashboardFilter) => void
+  periodSummary: PeriodSummaryResponse | null
+  monthCalendar: MonthCalendarResponse | null
+  calendarMonth: string
+  selectedDate: string
+  onCalendarMonthChange: (month: string) => void
+  onSelectDate: (date: string) => void
 }) {
   return (
     <section className="page-stack">
-      <section className="stats-summary-grid">
-        <MetricCard label="Active time" value={formatDuration(props.dashboard.summary.activeSeconds)} />
-        <MetricCard label="Applications" value={`${props.dashboard.appSlices.length}`} />
-        <MetricCard label="Domains" value={`${props.dashboard.domainSlices.length}`} />
-        <MetricCard label="Presence states" value={`${props.dashboard.presenceSlices.length}`} />
-      </section>
+      {props.periodSummary ? (
+        <section className="period-summary-grid">
+          <PeriodCard
+            label="今日"
+            active={props.periodSummary.today.active_seconds}
+            focus={props.periodSummary.today.focus_seconds}
+          />
+          <PeriodCard
+            label="本周"
+            active={props.periodSummary.week.active_seconds}
+            focus={props.periodSummary.week.focus_seconds}
+          />
+          <PeriodCard
+            label="本月"
+            active={props.periodSummary.month.active_seconds}
+            focus={props.periodSummary.month.focus_seconds}
+          />
+        </section>
+      ) : (
+        <section className="stats-summary-grid">
+          <MetricCard label="Active time" value={formatDuration(props.dashboard.summary.activeSeconds)} />
+          <MetricCard label="Applications" value={`${props.dashboard.appSlices.length}`} />
+          <MetricCard label="Domains" value={`${props.dashboard.domainSlices.length}`} />
+          <MetricCard label="Presence states" value={`${props.dashboard.presenceSlices.length}`} />
+        </section>
+      )}
+
+      {props.monthCalendar ? (
+        <div className="panel">
+          <div className="panel-header">
+            <div>
+              <p className="section-kicker">Calendar</p>
+              <h2>月度活跃日历</h2>
+            </div>
+          </div>
+          <CalendarGrid
+            month={props.calendarMonth}
+            days={props.monthCalendar.days}
+            selectedDate={props.selectedDate}
+            onSelectDate={props.onSelectDate}
+            onMonthChange={props.onCalendarMonthChange}
+          />
+        </div>
+      ) : null}
 
       <section className="stats-grid">
         <div className="panel">
@@ -654,6 +729,18 @@ function MetricCard(props: { label: string; value: string }) {
   )
 }
 
+function PeriodCard(props: { label: string; active: number; focus: number }) {
+  return (
+    <article className="metric-card period-card">
+      <span>{props.label}</span>
+      <strong>{formatDuration(props.active)}</strong>
+      <small className="period-card-detail">
+        Focus {formatDuration(props.focus)}
+      </small>
+    </article>
+  )
+}
+
 function RankingList(props: { title: string; slices: DonutSlice[] }) {
   return (
     <div className="ranking-card">
@@ -839,6 +926,10 @@ function normalizeZoomHours(hours: number) {
 
 function clampZoomHours(hours: number) {
   return Math.max(MIN_ZOOM_HOURS, Math.min(hours, MAX_ZOOM_HOURS))
+}
+
+function monthFromDate(date: string) {
+  return date.slice(0, 7)
 }
 
 export default App

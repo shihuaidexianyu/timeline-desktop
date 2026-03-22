@@ -178,3 +178,50 @@ pub struct BrowserEventAck {
     pub accepted: bool,
     pub reason: Option<String>,
 }
+
+// ── Month calendar and period summary types ──
+
+/// A key-label-seconds triple for "top app" / "top domain" in day summaries.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KeyedDurationEntry {
+    pub key: String,
+    pub label: String,
+    pub seconds: i64,
+}
+
+/// Aggregated totals for a single day, used in calendar cells and overview cards.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DaySummary {
+    pub date: String,
+    pub focus_seconds: i64,
+    pub active_seconds: i64,
+    pub browser_seconds: i64,
+    pub switch_count: i64,
+    pub top_app: Option<KeyedDurationEntry>,
+    pub top_domain: Option<KeyedDurationEntry>,
+}
+
+/// GET /api/calendar/month response — one month of daily summaries.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MonthCalendarResponse {
+    pub month: String,
+    pub timezone: String,
+    pub days: Vec<DaySummary>,
+}
+
+/// Focus and active totals for a time period (today / week / month).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PeriodStat {
+    pub focus_seconds: i64,
+    pub active_seconds: i64,
+}
+
+/// GET /api/stats/summary response — today, this week, and this month totals.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PeriodSummaryResponse {
+    pub date: String,
+    pub timezone: String,
+    pub today: PeriodStat,
+    pub week: PeriodStat,
+    pub month: PeriodStat,
+}

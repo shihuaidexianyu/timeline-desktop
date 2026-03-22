@@ -163,3 +163,48 @@ export async function updateAutostart(payload: UpdateAutostartRequest) {
 
   return result.data
 }
+
+// ── Month calendar and period summary types ──
+
+export type KeyedDurationEntry = {
+  key: string
+  label: string
+  seconds: number
+}
+
+export type DaySummary = {
+  date: string
+  focus_seconds: number
+  active_seconds: number
+  browser_seconds: number
+  switch_count: number
+  top_app: KeyedDurationEntry | null
+  top_domain: KeyedDurationEntry | null
+}
+
+export type MonthCalendarResponse = {
+  month: string
+  timezone: string
+  days: DaySummary[]
+}
+
+export type PeriodStat = {
+  focus_seconds: number
+  active_seconds: number
+}
+
+export type PeriodSummaryResponse = {
+  date: string
+  timezone: string
+  today: PeriodStat
+  week: PeriodStat
+  month: PeriodStat
+}
+
+export function getMonthCalendar(month: string) {
+  return request<MonthCalendarResponse>(`/api/calendar/month?month=${month}`)
+}
+
+export function getPeriodSummary(date: string) {
+  return request<PeriodSummaryResponse>(`/api/stats/summary?date=${date}`)
+}

@@ -13,7 +13,7 @@ use axum::{
 };
 use common::{
     AgentMonitorStatus, AgentSettingsResponse, ApiResponse, BrowserEventPayload, HealthResponse,
-    UpdateAutostartRequest, UpdateAutostartResponse,
+    MonthCalendarResponse, PeriodSummaryResponse, UpdateAutostartRequest, UpdateAutostartResponse,
 };
 use serde::Deserialize;
 use time::format_description::parse;
@@ -37,6 +37,8 @@ pub fn build_router(state: AgentState) -> Router {
         .route("/api/settings/autostart", post(post_autostart))
         .route("/api/debug/recent-events", get(get_recent_events))
         .route("/api/events/browser", post(post_browser_event))
+        .route("/api/calendar/month", get(get_month_calendar))
+        .route("/api/stats/summary", get(get_period_summary))
         .layer(middleware::from_fn(validate_request_origin))
         .layer(build_cors_layer())
         .with_state(state.clone());
@@ -159,6 +161,35 @@ async fn post_browser_event(
     Ok(Json(ApiResponse::ok(ack)))
 }
 
+#[derive(Debug, Deserialize)]
+struct MonthQuery {
+    month: Option<String>,
+}
+
+async fn get_month_calendar(
+    State(state): State<AgentState>,
+    Query(query): Query<MonthQuery>,
+) -> Result<Json<ApiResponse<MonthCalendarResponse>>, AppError> {
+    let (year, month) = parse_or_current_month(query.month.as_deref(), state.timezone())?;
+    let calendar = state
+        .store()
+        .read_month_calendar(year, month, state.timezone())
+        .await?;
+    Ok(Json(ApiResponse::ok(calendar)))
+}
+
+async fn get_period_summary(
+    State(state): State<AgentState>,
+    Query(query): Query<DayQuery>,
+) -> Result<Json<ApiResponse<PeriodSummaryResponse>>, AppError> {
+    let date = parse_or_today(query.date.as_deref(), state.timezone())?;
+    let summary = state
+        .store()
+        .read_period_summary(date, state.timezone())
+        .await?;
+    Ok(Json(ApiResponse::ok(summary)))
+}
+
 fn parse_or_today(value: Option<&str>, timezone: time::UtcOffset) -> Result<Date, AppError> {
     if let Some(value) = value {
         let format = parse("[year]-[month]-[day]")
@@ -168,6 +199,33 @@ fn parse_or_today(value: Option<&str>, timezone: time::UtcOffset) -> Result<Date
     }
 
     Ok(OffsetDateTime::now_utc().to_offset(timezone).date())
+}
+
+/// Parses a "YYYY-MM" string into (year, Month), defaulting to the current month.
+fn parse_or_current_month(
+    value: Option<&str>,
+    timezone: time::UtcOffset,
+) -> Result<(i32, time::Month), AppError> {
+    if let Some(value) = value {
+        let parts: Vec<&str> = value.split('-').collect();
+        if parts.len() != 2 {
+            return Err(AppError::bad_request("invalid_month", "month must use YYYY-MM"));
+        }
+
+        let year: i32 = parts[0]
+            .parse()
+            .map_err(|_| AppError::bad_request("invalid_month", "invalid year in YYYY-MM"))?;
+        let month_num: u8 = parts[1]
+            .parse()
+            .map_err(|_| AppError::bad_request("invalid_month", "invalid month in YYYY-MM"))?;
+        let month = time::Month::try_from(month_num)
+            .map_err(|_| AppError::bad_request("invalid_month", "month must be 01-12"))?;
+
+        return Ok((year, month));
+    }
+
+    let now = OffsetDateTime::now_utc().to_offset(timezone);
+    Ok((now.year(), now.month()))
 }
 
 fn build_cors_layer() -> CorsLayer {

@@ -3,8 +3,9 @@
 use crate::config::AppConfig;
 use anyhow::{Context, Result, anyhow};
 use common::{
-    AppInfo, BrowserEventPayload, BrowserSegment, DebugEvent, DurationStat, FocusSegment,
-    FocusStats, PresenceSegment, PresenceState, TimelineDayResponse,
+    AppInfo, BrowserEventPayload, BrowserSegment, DaySummary, DebugEvent, DurationStat,
+    FocusSegment, FocusStats, KeyedDurationEntry, MonthCalendarResponse, PeriodStat,
+    PeriodSummaryResponse, PresenceSegment, PresenceState, TimelineDayResponse,
 };
 use serde::Serialize;
 use sqlx::{Row, SqlitePool, sqlite::SqliteConnectOptions};
@@ -557,6 +558,139 @@ ORDER BY started_at ASC
         })
     }
 
+    /// Aggregates a single day's segments into a compact summary for calendar
+    /// and overview card display.
+    pub async fn read_day_summary(
+        &self,
+        date: Date,
+        timezone: UtcOffset,
+    ) -> Result<DaySummary> {
+        let timeline = self.read_day_timeline(date, timezone).await?;
+
+        let focus_seconds: i64 = timeline.focus_segments.iter().map(segment_seconds_focus).sum();
+        let active_seconds: i64 = timeline
+            .presence_segments
+            .iter()
+            .filter(|s| matches!(s.state, PresenceState::Active))
+            .map(segment_seconds_presence)
+            .sum();
+        let browser_seconds: i64 = timeline
+            .browser_segments
+            .iter()
+            .map(segment_seconds_browser)
+            .sum();
+        let switch_count = timeline.focus_segments.len().saturating_sub(1) as i64;
+
+        let top_app = top_entry(
+            &timeline.focus_segments,
+            |s| s.app.process_name.clone(),
+            |s| s.app.display_name.clone(),
+            segment_seconds_focus,
+        );
+        let top_domain = top_entry(
+            &timeline.browser_segments,
+            |s| s.domain.clone(),
+            |s| s.domain.clone(),
+            segment_seconds_browser,
+        );
+
+        Ok(DaySummary {
+            date: date.to_string(),
+            focus_seconds,
+            active_seconds,
+            browser_seconds,
+            switch_count,
+            top_app,
+            top_domain,
+        })
+    }
+
+    /// Returns daily summaries for every day in the given month.
+    pub async fn read_month_calendar(
+        &self,
+        year: i32,
+        month: time::Month,
+        timezone: UtcOffset,
+    ) -> Result<MonthCalendarResponse> {
+        let first_day = Date::from_calendar_date(year, month, 1)
+            .map_err(|e| anyhow!("invalid month: {e}"))?;
+        let days_in_month = days_in_month(year, month);
+
+        let mut days = Vec::with_capacity(days_in_month as usize);
+        for day_offset in 0..days_in_month {
+            let date = first_day + Duration::days(day_offset as i64);
+            days.push(self.read_day_summary(date, timezone).await?);
+        }
+
+        Ok(MonthCalendarResponse {
+            month: format!("{:04}-{:02}", year, month as u8),
+            timezone: timezone.to_string(),
+            days,
+        })
+    }
+
+    /// Returns today / this-week / this-month aggregated totals relative to
+    /// the given anchor date.
+    pub async fn read_period_summary(
+        &self,
+        anchor_date: Date,
+        timezone: UtcOffset,
+    ) -> Result<PeriodSummaryResponse> {
+        let today_summary = self.read_day_summary(anchor_date, timezone).await?;
+        let today = PeriodStat {
+            focus_seconds: today_summary.focus_seconds,
+            active_seconds: today_summary.active_seconds,
+        };
+
+        // Natural week: Monday through Sunday.
+        let weekday_offset = anchor_date.weekday().number_days_from_monday() as i64;
+        let week_start = anchor_date - Duration::days(weekday_offset);
+        let week_end = week_start + Duration::days(6);
+        let week = self.aggregate_period(week_start, week_end, timezone).await?;
+
+        // Natural month.
+        let month_start = Date::from_calendar_date(
+            anchor_date.year(),
+            anchor_date.month(),
+            1,
+        )
+        .map_err(|e| anyhow!("invalid month start: {e}"))?;
+        let month_days = days_in_month(anchor_date.year(), anchor_date.month());
+        let month_end = month_start + Duration::days(month_days as i64 - 1);
+        let month = self.aggregate_period(month_start, month_end, timezone).await?;
+
+        Ok(PeriodSummaryResponse {
+            date: anchor_date.to_string(),
+            timezone: timezone.to_string(),
+            today,
+            week,
+            month,
+        })
+    }
+
+    async fn aggregate_period(
+        &self,
+        start: Date,
+        end: Date,
+        timezone: UtcOffset,
+    ) -> Result<PeriodStat> {
+        let mut focus_seconds = 0i64;
+        let mut active_seconds = 0i64;
+        let mut current = start;
+
+        while current <= end {
+            let summary = self.read_day_summary(current, timezone).await?;
+            focus_seconds += summary.focus_seconds;
+            active_seconds += summary.active_seconds;
+            current = current.next_day().unwrap_or(current);
+        }
+
+        Ok(PeriodStat {
+            focus_seconds,
+            active_seconds,
+        })
+    }
+
     pub async fn read_recent_events(&self, limit: i64) -> Result<Vec<DebugEvent>> {
         let rows = sqlx::query(
             "SELECT id, kind, payload_json, observed_at FROM raw_events ORDER BY id DESC LIMIT ?",
@@ -725,6 +859,51 @@ fn to_duration_stats(
 
     rows.sort_by(|left, right| right.seconds.cmp(&left.seconds));
     rows
+}
+
+/// Finds the entry with the longest total duration across segments, grouped by key.
+fn top_entry<S, KeyFn, LabelFn, SecsFn>(
+    segments: &[S],
+    key_fn: KeyFn,
+    label_fn: LabelFn,
+    secs_fn: SecsFn,
+) -> Option<KeyedDurationEntry>
+where
+    KeyFn: Fn(&S) -> String,
+    LabelFn: Fn(&S) -> String,
+    SecsFn: Fn(&S) -> i64,
+{
+    let mut buckets: BTreeMap<String, (String, i64)> = BTreeMap::new();
+    for segment in segments {
+        let key = key_fn(segment);
+        let label = label_fn(segment);
+        let seconds = secs_fn(segment);
+        let entry = buckets.entry(key).or_insert((label, 0));
+        entry.1 += seconds;
+    }
+
+    buckets
+        .into_iter()
+        .max_by_key(|(_, (_, seconds))| *seconds)
+        .map(|(key, (label, seconds))| KeyedDurationEntry {
+            key,
+            label,
+            seconds,
+        })
+}
+
+/// Returns the number of days in the given year/month.
+fn days_in_month(year: i32, month: time::Month) -> u8 {
+    let next_month = month.next();
+    let (next_year, next_m) = if next_month == time::Month::January {
+        (year + 1, next_month)
+    } else {
+        (year, next_month)
+    };
+
+    let first_of_next = Date::from_calendar_date(next_year, next_m, 1).unwrap();
+    let first_of_this = Date::from_calendar_date(year, month, 1).unwrap();
+    (first_of_next - first_of_this).whole_days() as u8
 }
 
 #[cfg(test)]
