@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import type { DaySummary } from '../api'
-import { formatDuration, todayString } from '../lib/chart-model'
+import { formatDuration } from '../lib/chart-model'
 
 const WEEKDAY_LABELS = ['一', '二', '三', '四', '五', '六', '日']
 
@@ -19,6 +19,7 @@ export function CalendarGrid(props: {
   month: string
   days: DaySummary[]
   selectedDate: string
+  todayDate: string | null
   onSelectDate: (date: string) => void
   onMonthChange: (month: string) => void
 }) {
@@ -27,8 +28,6 @@ export function CalendarGrid(props: {
     [props.month, props.days],
   )
   const monthSummary = useMemo(() => buildMonthSummary(props.days), [props.days])
-  const todayStr = todayString()
-
   return (
     <div className="calendar-panel">
       <div className="calendar-header">
@@ -51,12 +50,12 @@ export function CalendarGrid(props: {
 
       <div className="calendar-summary-grid">
         <article className="calendar-summary-card">
-          <span>本月活跃</span>
+          <span>当月活跃</span>
           <strong>{formatDuration(monthSummary.totalActiveSeconds)}</strong>
           <small>{monthSummary.activeDays} 天有记录</small>
         </article>
         <article className="calendar-summary-card">
-          <span>本月应用</span>
+          <span>当月应用</span>
           <strong>{formatDuration(monthSummary.totalFocusSeconds)}</strong>
           <small>{monthSummary.totalSwitchCount} 次切换</small>
         </article>
@@ -80,7 +79,7 @@ export function CalendarGrid(props: {
           }
 
           const isSelected = cell.date === props.selectedDate
-          const isToday = cell.date === todayStr
+          const isToday = props.todayDate !== null && cell.date === props.todayDate
 
           return (
             <button

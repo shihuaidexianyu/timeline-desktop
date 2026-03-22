@@ -127,8 +127,9 @@ async function request<T>(path: string): Promise<T> {
   return payload.data
 }
 
-export function getTimeline(date: string) {
-  return request<TimelineDayResponse>(`/api/timeline/day?date=${date}`)
+export function getTimeline(date?: string) {
+  const query = date ? `?date=${encodeURIComponent(date)}` : ''
+  return request<TimelineDayResponse>(`/api/timeline/day${query}`)
 }
 
 export function getAppStats(date: string) {
@@ -205,6 +206,7 @@ export function getMonthCalendar(month: string) {
   return request<MonthCalendarResponse>(`/api/calendar/month?month=${month}`)
 }
 
-export function getPeriodSummary(date: string) {
-  return request<PeriodSummaryResponse>(`/api/stats/summary?date=${date}`)
+export function getPeriodSummary(date?: string) {
+  const query = date ? `?date=${encodeURIComponent(date)}` : ''
+  return request<PeriodSummaryResponse>(`/api/stats/summary${query}`)
 }

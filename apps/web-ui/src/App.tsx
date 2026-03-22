@@ -1,6 +1,6 @@
 /* ActivityWatch-inspired multi-page dashboard for stats, timeline, and settings. */
 
-import { startTransition, useEffect, useMemo, useState } from 'react'
+import { startTransition, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import {
   API_BASE_URL,
@@ -10,6 +10,7 @@ import {
   getTimeline,
   updateAutostart,
   type AgentSettingsResponse,
+  type DaySummary,
   type MonthCalendarResponse,
   type PeriodSummaryResponse,
   type TimelineDayResponse,
@@ -22,7 +23,6 @@ import {
   buildDashboardModel,
   formatClockRange,
   formatDuration,
-  todayString,
   type DashboardFilter,
   type DashboardModel,
   type DonutSlice,
@@ -39,9 +39,8 @@ const PAGE_ITEMS = [
 type AppPage = (typeof PAGE_ITEMS)[number]['id']
 
 function App() {
-  const defaultTimelineWindow = defaultTimelineViewport(todayString())
   const [page, setPage] = useHashPage()
-  const [selectedDate, setSelectedDate] = useState(() => todayString())
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [timeline, setTimeline] = useState<TimelineDayResponse | null>(null)
   const [agentSettings, setAgentSettings] = useState<AgentSettingsResponse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -53,29 +52,51 @@ function App() {
   const [appFilter, setAppFilter] = useState<DashboardFilter>(null)
   const [domainFilter, setDomainFilter] = useState<DashboardFilter>(null)
   const [selectedBrowserSegmentId, setSelectedBrowserSegmentId] = useState<string | null>(null)
-  const [zoomHours, setZoomHours] = useState<number>(defaultTimelineWindow.zoomHours)
-  const [viewStartHour, setViewStartHour] = useState(defaultTimelineWindow.viewStartHour)
+  const [zoomHours, setZoomHours] = useState<number>(0.5)
+  const [viewStartHour, setViewStartHour] = useState(0)
   const [periodSummary, setPeriodSummary] = useState<PeriodSummaryResponse | null>(null)
-  const [calendarMonth, setCalendarMonth] = useState(() => monthFromDate(todayString()))
+  const [calendarMonth, setCalendarMonth] = useState<string | null>(null)
   const [monthCalendar, setMonthCalendar] = useState<MonthCalendarResponse | null>(null)
+  const [calendarError, setCalendarError] = useState<string | null>(null)
+  const [agentToday, setAgentToday] = useState<string | null>(null)
+  const [agentTimezone, setAgentTimezone] = useState<string | null>(null)
+  const skipNextDateLoadRef = useRef(false)
 
   useEffect(() => {
+    if (selectedDate !== null) {
+      return
+    }
+
     let cancelled = false
 
-    async function load() {
+    async function bootstrap() {
       setLoading(true)
       setError(null)
 
       try {
         const [nextTimeline, nextSettings, nextPeriod] = await Promise.all([
-          getTimeline(selectedDate),
+          getTimeline(),
           getAgentSettings(),
-          getPeriodSummary(selectedDate),
+          getPeriodSummary(),
         ])
         if (cancelled) {
           return
         }
 
+        const resolvedDate = nextTimeline.date
+        const nextWindow = defaultTimelineViewport(
+          resolvedDate,
+          nextPeriod.date,
+          nextTimeline.timezone,
+        )
+
+        skipNextDateLoadRef.current = true
+        setSelectedDate(resolvedDate)
+        setCalendarMonth(monthFromDate(resolvedDate))
+        setAgentToday(nextPeriod.date)
+        setAgentTimezone(nextTimeline.timezone)
+        setZoomHours(nextWindow.zoomHours)
+        setViewStartHour(nextWindow.viewStartHour)
         setTimeline(nextTimeline)
         setAgentSettings(nextSettings)
         setPeriodSummary(nextPeriod)
@@ -96,7 +117,7 @@ function App() {
       }
     }
 
-    void load()
+    void bootstrap()
 
     return () => {
       cancelled = true
@@ -104,18 +125,88 @@ function App() {
   }, [selectedDate])
 
   useEffect(() => {
+    if (selectedDate === null) {
+      return
+    }
+
+    const currentDate = selectedDate
+
+    if (skipNextDateLoadRef.current) {
+      skipNextDateLoadRef.current = false
+      return
+    }
+
     let cancelled = false
+
+    async function loadSelectedDate() {
+      setLoading(true)
+      setError(null)
+
+      try {
+        const [nextTimeline, nextSettings, nextPeriod] = await Promise.all([
+          getTimeline(currentDate),
+          getAgentSettings(),
+          getPeriodSummary(currentDate),
+        ])
+        if (cancelled) {
+          return
+        }
+
+        setTimeline(nextTimeline)
+        setAgentSettings(nextSettings)
+        setPeriodSummary(nextPeriod)
+        setAgentTimezone(nextTimeline.timezone)
+        setSettingsError(null)
+        setLastUpdatedAt(new Date().toLocaleTimeString())
+      } catch (loadError) {
+        if (cancelled) {
+          return
+        }
+
+        const message =
+          loadError instanceof Error ? loadError.message : '加载本地数据时发生未知错误'
+        setError(message)
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    void loadSelectedDate()
+
+    return () => {
+      cancelled = true
+    }
+  }, [selectedDate])
+
+  useEffect(() => {
+    if (calendarMonth === null) {
+      return
+    }
+
+    let cancelled = false
+    setCalendarError(null)
+    setMonthCalendar(null)
+
     void getMonthCalendar(calendarMonth)
       .then((data) => {
-        if (!cancelled) setMonthCalendar(data)
-      })
-      .catch((err) => {
         if (!cancelled) {
-          console.warn('月历数据加载失败', err)
+          setMonthCalendar(data)
+        }
+      })
+      .catch((loadError) => {
+        if (!cancelled) {
+          const message =
+            loadError instanceof Error ? loadError.message : '加载月历数据时发生未知错误'
+          setCalendarError(message)
           setMonthCalendar(null)
         }
       })
-    return () => { cancelled = true }
+
+    return () => {
+      cancelled = true
+    }
   }, [calendarMonth])
 
   useEffect(() => {
@@ -149,6 +240,35 @@ function App() {
   const viewStartSec = viewStartHour * 3600
   const viewEndSec = viewStartSec + zoomHours * 3600
   const pageInfo = pageMeta(page)
+  const resolvedSelectedDate = selectedDate ?? timeline?.date ?? '--'
+
+  function applySelectedDate(nextDate: string) {
+    const nextWindow = defaultTimelineViewport(nextDate, agentToday, agentTimezone)
+
+    startTransition(() => {
+      setSelectedDate(nextDate)
+      setCalendarMonth(monthFromDate(nextDate))
+      setSelectedBrowserSegmentId(null)
+      setDomainFilter(null)
+      setZoomHours(nextWindow.zoomHours)
+      setViewStartHour(nextWindow.viewStartHour)
+    })
+  }
+
+  function handleCalendarMonthChange(nextMonth: string) {
+    const baseDate = selectedDate ?? agentToday ?? `${nextMonth}-01`
+    const nextDate = coerceDateIntoMonth(nextMonth, baseDate)
+    const nextWindow = defaultTimelineViewport(nextDate, agentToday, agentTimezone)
+
+    startTransition(() => {
+      setCalendarMonth(nextMonth)
+      setSelectedDate(nextDate)
+      setSelectedBrowserSegmentId(null)
+      setDomainFilter(null)
+      setZoomHours(nextWindow.zoomHours)
+      setViewStartHour(nextWindow.viewStartHour)
+    })
+  }
 
   return (
     <main className="app-shell app-layout">
@@ -193,11 +313,11 @@ function App() {
           <div className="activity-meta">
             <span>
               <strong>日期</strong>
-              {selectedDate}
+              {resolvedSelectedDate}
             </span>
             <span>
               <strong>时区</strong>
-              {timeline?.timezone ?? '--'}
+              {agentTimezone ?? timeline?.timezone ?? '--'}
             </span>
           </div>
         </header>
@@ -216,17 +336,12 @@ function App() {
                 setDomainFilter={setDomainFilter}
                 periodSummary={periodSummary}
                 monthCalendar={monthCalendar}
-                calendarMonth={calendarMonth}
-                selectedDate={selectedDate}
-                onCalendarMonthChange={setCalendarMonth}
-                onSelectDate={(date) => {
-                  const nextWindow = defaultTimelineViewport(date)
-                  startTransition(() => {
-                    setSelectedDate(date)
-                    setZoomHours(nextWindow.zoomHours)
-                    setViewStartHour(nextWindow.viewStartHour)
-                  })
-                }}
+                calendarMonth={calendarMonth ?? monthFromDate(resolvedSelectedDate)}
+                selectedDate={resolvedSelectedDate}
+                agentToday={agentToday}
+                calendarError={calendarError}
+                onCalendarMonthChange={handleCalendarMonthChange}
+                onSelectDate={applySelectedDate}
               />
             ) : null}
 
@@ -235,7 +350,7 @@ function App() {
                 dashboard={dashboard}
                 appFilter={appFilter}
                 domainFilter={domainFilter}
-                selectedDate={selectedDate}
+                selectedDate={resolvedSelectedDate}
                 selectedBrowserSegmentId={selectedBrowserSegmentId}
                 selectedBrowserSegment={selectedBrowserSegment}
                 browserDetail={browserDetail}
@@ -256,9 +371,8 @@ function App() {
                 error={error}
                 settingsError={settingsError}
                 lastUpdatedAt={lastUpdatedAt}
-                selectedDate={selectedDate}
-                timezone={timeline?.timezone ?? '--'}
-                activeOnly={activeOnly}
+                selectedDate={resolvedSelectedDate}
+                timezone={agentTimezone ?? timeline?.timezone ?? '--'}
                 savingAutostart={savingAutostart}
                 onToggleAutostart={async (enabled) => {
                   setSavingAutostart(true)
@@ -303,86 +417,438 @@ function StatsPage(props: {
   monthCalendar: MonthCalendarResponse | null
   calendarMonth: string
   selectedDate: string
+  agentToday: string | null
+  calendarError: string | null
   onCalendarMonthChange: (month: string) => void
   onSelectDate: (date: string) => void
 }) {
+  const selectedSummary =
+    props.monthCalendar?.days.find((day) => day.date === props.selectedDate) ?? null
+  const weekBars = buildWeekSeries(props.monthCalendar?.days ?? [], props.selectedDate)
+  const topApps = props.dashboard.appSlices.filter((slice) => slice.key !== 'others').slice(0, 5)
+  const topDomains = props.dashboard.domainSlices
+    .filter((slice) => slice.key !== 'others')
+    .slice(0, 3)
+  const presenceByKey = new Map(
+    props.dashboard.presenceSlices.map((slice) => [slice.key, slice.value]),
+  )
+  const isCurrentDate = props.agentToday !== null && props.selectedDate === props.agentToday
+
   return (
     <section className="page-stack">
-      <section className="period-summary-grid">
-        <PeriodCard
-          label="今日"
-          active={props.periodSummary?.today.active_seconds ?? 0}
-          focus={props.periodSummary?.today.focus_seconds ?? 0}
+      <section className="stats-showcase-grid">
+        <DailySnapshotCard
+          selectedDate={props.selectedDate}
+          selectedSummary={selectedSummary}
+          dashboard={props.dashboard}
+          topDomains={topDomains}
         />
-        <PeriodCard
-          label="本周"
-          active={props.periodSummary?.week.active_seconds ?? 0}
-          focus={props.periodSummary?.week.focus_seconds ?? 0}
+        <WeeklyRhythmCard
+          periodSummary={props.periodSummary}
+          weekBars={weekBars}
+          topApps={topApps}
+          isCurrentDate={isCurrentDate}
         />
-        <PeriodCard
-          label="本月"
-          active={props.periodSummary?.month.active_seconds ?? 0}
-          focus={props.periodSummary?.month.focus_seconds ?? 0}
+        <FocusBalanceCard
+          dashboard={props.dashboard}
+          periodSummary={props.periodSummary}
+          activeSeconds={presenceByKey.get('active') ?? 0}
+          idleSeconds={presenceByKey.get('idle') ?? 0}
+          lockedSeconds={presenceByKey.get('locked') ?? 0}
+          isCurrentDate={isCurrentDate}
         />
       </section>
 
-      {props.monthCalendar ? (
-        <div className="panel">
-          <CalendarGrid
-            month={props.calendarMonth}
-            days={props.monthCalendar.days}
-            selectedDate={props.selectedDate}
-            onSelectDate={props.onSelectDate}
-            onMonthChange={props.onCalendarMonthChange}
-          />
-        </div>
-      ) : null}
-
-      <section className="stats-grid">
-        <div className="panel">
-          <DonutChart
-            title="应用分布"
-            totalLabel={formatDuration(props.dashboard.summary.focusSeconds)}
-            slices={props.dashboard.appSlices}
-            filter={props.appFilter}
-            filterKind="app"
-            onSelect={props.setAppFilter}
-          />
-        </div>
-
-        <div className="panel">
-          <DonutChart
-            title="域名分布"
-            totalLabel={formatDuration(sumSlices(props.dashboard.domainSlices))}
-            slices={props.dashboard.domainSlices}
-            filter={props.domainFilter}
-            filterKind="domain"
-            onSelect={props.setDomainFilter}
-          />
+      <section className="stats-support-grid">
+        <div className="panel stats-calendar-card">
+          <div className="panel-header">
+            <div>
+              <p className="section-kicker">Calendar</p>
+              <h2>月度日历</h2>
+            </div>
+          </div>
+          {props.monthCalendar ? (
+            <CalendarGrid
+              month={props.calendarMonth}
+              days={props.monthCalendar.days}
+              selectedDate={props.selectedDate}
+              todayDate={props.agentToday}
+              onSelectDate={props.onSelectDate}
+              onMonthChange={props.onCalendarMonthChange}
+            />
+          ) : props.calendarError ? (
+            <div className="state-card error-card">{props.calendarError}</div>
+          ) : (
+            <div className="state-card">正在加载该月份的汇总日历…</div>
+          )}
         </div>
 
-        <div className="panel">
-          <DonutChart
-            title="状态分布"
-            totalLabel={formatDuration(sumSlices(props.dashboard.presenceSlices))}
-            slices={props.dashboard.presenceSlices}
-            filter={null}
-            filterKind="domain"
-            onSelect={() => { }}
-          />
-        </div>
-      </section>
+        <div className="stats-side-stack">
+          <div className="panel">
+            <DonutChart
+              title="应用分布"
+              totalLabel={formatDuration(props.dashboard.summary.focusSeconds)}
+              slices={props.dashboard.appSlices}
+              filter={props.appFilter}
+              filterKind="app"
+              onSelect={props.setAppFilter}
+            />
+          </div>
 
-      <section className="stats-grid stats-grid-lists">
-        <div className="panel">
-          <RankingList title="应用排行" slices={props.dashboard.appSlices} />
-        </div>
-
-        <div className="panel">
-          <RankingList title="域名排行" slices={props.dashboard.domainSlices} />
+          <div className="panel">
+            <DonutChart
+              title="域名分布"
+              totalLabel={formatDuration(sumSlices(props.dashboard.domainSlices))}
+              slices={props.dashboard.domainSlices}
+              filter={props.domainFilter}
+              filterKind="domain"
+              onSelect={props.setDomainFilter}
+            />
+          </div>
         </div>
       </section>
     </section>
+  )
+}
+
+function DailySnapshotCard(props: {
+  selectedDate: string
+  selectedSummary: DaySummary | null
+  dashboard: DashboardModel
+  topDomains: DonutSlice[]
+}) {
+  const appSlices = props.dashboard.appSlices.filter((slice) => slice.key !== 'others').slice(0, 4)
+  const topApp = appSlices[0] ?? null
+  const topDomain = props.topDomains[0] ?? null
+
+  return (
+    <article className="showcase-card showcase-card-daily">
+      <div className="showcase-card-head">
+        <div>
+          <p className="section-kicker">Daily Pulse</p>
+          <h2>{formatDateHeading(props.selectedDate)}</h2>
+        </div>
+        <span className="showcase-avatar">{props.selectedDate.slice(8, 10)}</span>
+      </div>
+
+      <p className="showcase-copy">围绕所选日期，快速查看活跃时长、切换频率和最常出现的上下文。</p>
+
+      <div className="showcase-orb-wrap">
+        <UsageOrbit
+          slices={appSlices}
+          primaryLabel={formatDuration(props.dashboard.summary.activeSeconds)}
+          secondaryLabel="活跃时长"
+        />
+      </div>
+
+      <div className="showcase-stat-grid">
+        <div className="showcase-stat-pill">
+          <span>应用数</span>
+          <strong>{props.dashboard.meta.focusCount}</strong>
+        </div>
+        <div className="showcase-stat-pill">
+          <span>切换次数</span>
+          <strong>{props.dashboard.summary.switchCount}</strong>
+        </div>
+      </div>
+
+      <div className="showcase-tag-list">
+        {topApp ? (
+          <span className="showcase-tag">
+            常用应用
+            <strong>{topApp.label}</strong>
+          </span>
+        ) : null}
+        {topDomain ? (
+          <span className="showcase-tag">
+            常用域名
+            <strong>{topDomain.label}</strong>
+          </span>
+        ) : null}
+        {props.selectedSummary?.switch_count ? (
+          <span className="showcase-tag">
+            切换次数
+            <strong>{props.selectedSummary.switch_count} 次</strong>
+          </span>
+        ) : null}
+      </div>
+    </article>
+  )
+}
+
+function WeeklyRhythmCard(props: {
+  periodSummary: PeriodSummaryResponse | null
+  weekBars: WeekBarDatum[]
+  topApps: DonutSlice[]
+  isCurrentDate: boolean
+}) {
+  return (
+    <article className="showcase-card showcase-card-dashboard">
+      <div className="showcase-card-head">
+        <div>
+          <p className="section-kicker">Dashboard</p>
+          <h2>{props.isCurrentDate ? '本周节奏' : '所在周节奏'}</h2>
+        </div>
+        <span className="showcase-chip">{props.isCurrentDate ? 'This Week' : 'Selected Week'}</span>
+      </div>
+
+      <div className="weekly-summary-row">
+        <div>
+          <strong>{formatDuration(props.periodSummary?.week.active_seconds ?? 0)}</strong>
+          <small>活跃总时长</small>
+        </div>
+        <div>
+          <strong>{formatDuration(props.periodSummary?.month.active_seconds ?? 0)}</strong>
+          <small>当月累计</small>
+        </div>
+      </div>
+
+      <WeeklyBarChart bars={props.weekBars} />
+
+      <div className="mini-list-card">
+        <div className="mini-list-head">
+          <span>Most Used</span>
+          <strong>应用排行</strong>
+        </div>
+        <div className="mini-usage-list">
+          {props.topApps.length === 0 ? (
+            <div className="empty-card">所选日期没有应用记录</div>
+          ) : (
+            props.topApps.map((slice) => (
+              <div key={slice.id} className="mini-usage-row">
+                <span className="mini-usage-name">
+                  <i style={{ backgroundColor: slice.color }} />
+                  {slice.label}
+                </span>
+                <span>{formatDuration(slice.value)}</span>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </article>
+  )
+}
+
+function FocusBalanceCard(props: {
+  dashboard: DashboardModel
+  periodSummary: PeriodSummaryResponse | null
+  activeSeconds: number
+  idleSeconds: number
+  lockedSeconds: number
+  isCurrentDate: boolean
+}) {
+  const activeRatio =
+    props.dashboard.summary.focusSeconds > 0
+      ? props.dashboard.summary.activeSeconds / props.dashboard.summary.focusSeconds
+      : 0
+  const appCount = props.dashboard.appSlices.filter((slice) => slice.key !== 'others').length
+
+  return (
+    <article className="showcase-card showcase-card-focus">
+      <div className="showcase-card-head">
+        <div>
+          <p className="section-kicker">WorkTime</p>
+          <h2>{props.isCurrentDate ? '今天专注' : '当日专注'}</h2>
+        </div>
+      </div>
+
+      <p className="focus-card-copy">
+        用专注环看活跃与应用时长的贴合程度，并快速确认这一天被多少应用片段占据。
+      </p>
+
+      <div className="focus-dial-wrap">
+        <FocusDial
+          activeSeconds={props.dashboard.summary.activeSeconds}
+          focusSeconds={props.dashboard.summary.focusSeconds}
+        />
+      </div>
+
+      <div className="focus-footnote">{appCount} 个应用被记录</div>
+
+      <div className="focus-metric-stack">
+        <div className="focus-metric-card">
+          <span>最长连续</span>
+          <strong>{formatDuration(props.dashboard.summary.longestFocusSeconds)}</strong>
+        </div>
+        <div className="focus-metric-card">
+          <span>活跃占比</span>
+          <strong>{formatPercent(activeRatio)}</strong>
+        </div>
+      </div>
+
+      <div className="presence-strip">
+        <span>活跃 {formatDuration(props.activeSeconds)}</span>
+        <span>空闲 {formatDuration(props.idleSeconds)}</span>
+        <span>锁定 {formatDuration(props.lockedSeconds)}</span>
+      </div>
+    </article>
+  )
+}
+
+function UsageOrbit(props: {
+  slices: DonutSlice[]
+  primaryLabel: string
+  secondaryLabel: string
+}) {
+  const size = 182
+  const radius = 60
+  const circumference = 2 * Math.PI * radius
+  const visibleSlices = props.slices.filter((slice) => slice.value > 0)
+  const total = visibleSlices.reduce((sum, slice) => sum + slice.value, 0)
+  let consumed = 0
+
+  return (
+    <svg
+      className="usage-orbit"
+      viewBox={`0 0 ${size} ${size}`}
+      role="img"
+      aria-label={`${props.secondaryLabel} ${props.primaryLabel}`}
+    >
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius + 14}
+        fill="none"
+        stroke="rgba(79, 124, 255, 0.08)"
+        strokeWidth="12"
+      />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke="rgba(79, 124, 255, 0.08)"
+        strokeWidth="14"
+      />
+      {visibleSlices.map((slice) => {
+        const segmentLength = total > 0 ? (slice.value / total) * circumference : 0
+        const dash = Math.max(segmentLength - 5, 0)
+        const offset = -consumed
+        consumed += segmentLength
+
+        return (
+          <circle
+            key={slice.id}
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke={slice.color}
+            strokeWidth="14"
+            strokeLinecap="round"
+            strokeDasharray={`${dash} ${circumference}`}
+            strokeDashoffset={offset}
+            transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          />
+        )
+      })}
+      <circle cx={size / 2} cy={size / 2} r={44} fill="rgba(255,255,255,0.96)" />
+      <text x="50%" y="48%" textAnchor="middle" className="usage-orbit-primary">
+        {props.primaryLabel}
+      </text>
+      <text x="50%" y="59%" textAnchor="middle" className="usage-orbit-secondary">
+        {props.secondaryLabel}
+      </text>
+    </svg>
+  )
+}
+
+function FocusDial(props: { activeSeconds: number; focusSeconds: number }) {
+  const size = 198
+  const radius = 64
+  const circumference = 2 * Math.PI * radius
+  const denominator = Math.max(props.focusSeconds, props.activeSeconds, 1)
+  const progress = props.activeSeconds / denominator
+  const dash = circumference * progress
+  const ticks = Array.from({ length: 12 }, (_, index) => index)
+
+  return (
+    <svg
+      className="focus-dial"
+      viewBox={`0 0 ${size} ${size}`}
+      role="img"
+      aria-label={`活跃 ${formatDuration(props.activeSeconds)}，应用 ${formatDuration(props.focusSeconds)}`}
+    >
+      {ticks.map((tick) => {
+        const angle = (tick / ticks.length) * Math.PI * 2 - Math.PI / 2
+        const x1 = size / 2 + Math.cos(angle) * 84
+        const y1 = size / 2 + Math.sin(angle) * 84
+        const x2 = size / 2 + Math.cos(angle) * 90
+        const y2 = size / 2 + Math.sin(angle) * 90
+        return (
+          <line
+            key={tick}
+            x1={x1}
+            y1={y1}
+            x2={x2}
+            y2={y2}
+            stroke="rgba(47, 111, 219, 0.55)"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+        )
+      })}
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke="rgba(79, 124, 255, 0.08)"
+        strokeWidth="12"
+      />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke="#2f6fdb"
+        strokeWidth="12"
+        strokeLinecap="round"
+        strokeDasharray={`${dash} ${circumference}`}
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+      />
+      <circle cx={size / 2} cy={size / 2} r={46} fill="rgba(255,255,255,0.98)" />
+      <text x="50%" y="48%" textAnchor="middle" className="focus-dial-primary">
+        {formatDuration(props.activeSeconds)}
+      </text>
+      <text x="50%" y="58%" textAnchor="middle" className="focus-dial-secondary">
+        应用 {formatDuration(props.focusSeconds)}
+      </text>
+    </svg>
+  )
+}
+
+type WeekBarDatum = {
+  date: string
+  dayLabel: string
+  activeSeconds: number
+  focusSeconds: number
+  isSelected: boolean
+}
+
+function WeeklyBarChart(props: { bars: WeekBarDatum[] }) {
+  const maxFocus = Math.max(...props.bars.map((bar) => bar.focusSeconds), 1)
+
+  return (
+    <div className="weekly-bars">
+      {props.bars.map((bar) => {
+        const focusHeight = `${Math.max((bar.focusSeconds / maxFocus) * 100, bar.focusSeconds > 0 ? 12 : 0)}%`
+        const activeHeight = `${Math.max((bar.activeSeconds / maxFocus) * 100, bar.activeSeconds > 0 ? 10 : 0)}%`
+
+        return (
+          <div key={bar.date} className={`weekly-bar-column ${bar.isSelected ? 'is-selected' : ''}`}>
+            <div className="weekly-bar-track">
+              <div className="weekly-bar weekly-bar-focus" style={{ height: focusHeight }}>
+                <div className="weekly-bar weekly-bar-active" style={{ height: activeHeight }} />
+              </div>
+            </div>
+            <span className="weekly-bar-value">{formatDuration(bar.activeSeconds)}</span>
+            <span className="weekly-bar-day">{bar.dayLabel}</span>
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
@@ -555,7 +1021,6 @@ function SettingsPage(props: {
   lastUpdatedAt: string | null
   selectedDate: string
   timezone: string
-  activeOnly: boolean
   savingAutostart: boolean
   onToggleAutostart: (enabled: boolean) => Promise<void>
 }) {
@@ -642,53 +1107,11 @@ function SettingsPage(props: {
             <dt>时区</dt>
             <dd>{props.timezone}</dd>
           </div>
-          <div>
-            <dt>仅活跃时段</dt>
-            <dd>{props.activeOnly ? '已启用' : '已禁用'}</dd>
-          </div>
         </dl>
 
         {props.settingsError ? <div className="settings-error">{props.settingsError}</div> : null}
       </div>
     </section>
-  )
-}
-
-function PeriodCard(props: { label: string; active: number; focus: number }) {
-  return (
-    <article className="metric-card period-card">
-      <span>{props.label}</span>
-      <strong>{formatDuration(props.active)}</strong>
-      <small className="period-card-detail">
-        应用时长 {formatDuration(props.focus)}
-      </small>
-    </article>
-  )
-}
-
-function RankingList(props: { title: string; slices: DonutSlice[] }) {
-  return (
-    <div className="ranking-card">
-      <div className="panel-header">
-        <div>
-          <p className="section-kicker">排行</p>
-          <h2>{props.title}</h2>
-        </div>
-      </div>
-
-      <div className="ranking-list">
-        {props.slices.map((slice) => (
-          <div key={slice.id} className="ranking-row">
-            <span className="ranking-name">
-              <i style={{ backgroundColor: slice.color }} />
-              {slice.label}
-            </span>
-            <span>{formatDuration(slice.value)}</span>
-            <span>{slice.percentage.toFixed(1)}%</span>
-          </div>
-        ))}
-      </div>
-    </div>
   )
 }
 
@@ -810,12 +1233,15 @@ function sumSlices(slices: DonutSlice[]) {
   return slices.reduce((sum, slice) => sum + slice.value, 0)
 }
 
-function defaultTimelineViewport(date: string) {
+function defaultTimelineViewport(
+  date: string,
+  agentToday: string | null,
+  timezone: string | null,
+) {
   const zoomHours = 0.5
-  const now = new Date()
 
-  if (date === todayString()) {
-    const currentHour = now.getHours() + now.getMinutes() / 60
+  if (agentToday !== null && date === agentToday) {
+    const currentHour = currentHourInTimezone(timezone)
     return {
       zoomHours,
       viewStartHour: clampViewStart(currentHour - zoomHours, zoomHours),
@@ -848,6 +1274,91 @@ function clampZoomHours(hours: number) {
 
 function monthFromDate(date: string) {
   return date.slice(0, 7)
+}
+
+function coerceDateIntoMonth(month: string, baseDate: string) {
+  const [yearText, monthText] = month.split('-')
+  const preferredDay = Number(baseDate.slice(8, 10)) || 1
+  const clampedDay = Math.min(preferredDay, daysInMonth(Number(yearText), Number(monthText)))
+  return `${yearText}-${monthText}-${String(clampedDay).padStart(2, '0')}`
+}
+
+function daysInMonth(year: number, month: number) {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate()
+}
+
+function buildWeekSeries(days: DaySummary[], selectedDate: string): WeekBarDatum[] {
+  const dayMap = new Map(days.map((day) => [day.date, day]))
+  const selected = parseDateString(selectedDate)
+  const weekday = (selected.getUTCDay() + 6) % 7
+  const monday = addDays(selected, -weekday)
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = addDays(monday, index)
+    const dateKey = formatDateKey(date)
+    const summary = dayMap.get(dateKey)
+
+    return {
+      date: dateKey,
+      dayLabel: `${formatWeekday(date)} ${String(date.getUTCDate()).padStart(2, '0')}`,
+      activeSeconds: summary?.active_seconds ?? 0,
+      focusSeconds: summary?.focus_seconds ?? 0,
+      isSelected: dateKey === selectedDate,
+    }
+  })
+}
+
+function formatDateHeading(date: string) {
+  const parsed = parseDateString(date)
+  return `${parsed.getUTCFullYear()} / ${String(parsed.getUTCMonth() + 1).padStart(2, '0')} / ${String(parsed.getUTCDate()).padStart(2, '0')}`
+}
+
+function formatPercent(value: number) {
+  return `${Math.round(value * 100)}%`
+}
+
+function currentHourInTimezone(timezone: string | null) {
+  const offsetMinutes = parseUtcOffsetMinutes(timezone)
+  if (offsetMinutes === null) {
+    const now = new Date()
+    return now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600
+  }
+
+  const shifted = new Date(Date.now() + offsetMinutes * 60_000)
+  return shifted.getUTCHours() + shifted.getUTCMinutes() / 60 + shifted.getUTCSeconds() / 3600
+}
+
+function parseUtcOffsetMinutes(value: string | null) {
+  if (!value || value === 'Z') {
+    return value === 'Z' ? 0 : null
+  }
+
+  const match = value.match(/^([+-])(\d{2}):(\d{2})$/)
+  if (!match) {
+    return null
+  }
+
+  const [, sign, hours, minutes] = match
+  const total = Number(hours) * 60 + Number(minutes)
+  return sign === '-' ? -total : total
+}
+
+function parseDateString(value: string) {
+  return new Date(`${value}T00:00:00Z`)
+}
+
+function addDays(date: Date, offset: number) {
+  const next = new Date(date)
+  next.setUTCDate(next.getUTCDate() + offset)
+  return next
+}
+
+function formatDateKey(date: Date) {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`
+}
+
+function formatWeekday(date: Date) {
+  return ['一', '二', '三', '四', '五', '六', '日'][(date.getUTCDay() + 6) % 7]
 }
 
 export default App
