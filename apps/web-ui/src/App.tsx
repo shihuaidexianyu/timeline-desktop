@@ -796,16 +796,20 @@ function WeeklyBarChart(props: {
   metric: 'active' | 'focus'
   onSelectDate: (date: string) => void
 }) {
-  const maxFocus = Math.max(...props.bars.map((bar) => bar.focusSeconds), 1)
+  const maxValue = Math.max(
+    ...props.bars.map((bar) =>
+      props.metric === 'active' ? bar.activeSeconds : bar.focusSeconds,
+    ),
+    1,
+  )
 
   return (
     <div className="weekly-bars">
       {props.bars.map((bar) => {
-        const focusHeight = `${Math.max((bar.focusSeconds / maxFocus) * 100, bar.focusSeconds > 0 ? 12 : 0)}%`
-        const activeHeight = `${Math.max((bar.activeSeconds / maxFocus) * 100, bar.activeSeconds > 0 ? 10 : 0)}%`
-        const valueLabel = formatDuration(
-          props.metric === 'active' ? bar.activeSeconds : bar.focusSeconds,
-        )
+        const value =
+          props.metric === 'active' ? bar.activeSeconds : bar.focusSeconds
+        const barHeight = `${Math.max((value / maxValue) * 100, value > 0 ? 12 : 0)}%`
+        const valueLabel = formatDuration(value)
 
         return (
           <button
@@ -816,9 +820,7 @@ function WeeklyBarChart(props: {
             title={`${bar.date} ${props.metric === 'active' ? '活跃' : '应用'} ${valueLabel}`}
           >
             <div className="weekly-bar-track">
-              <div className="weekly-bar weekly-bar-focus" style={{ height: focusHeight }}>
-                <div className="weekly-bar weekly-bar-active" style={{ height: activeHeight }} />
-              </div>
+              <div className="weekly-bar" style={{ height: barHeight }} />
             </div>
             <span className="weekly-bar-value">{valueLabel}</span>
             <span className="weekly-bar-day">{bar.dayLabel}</span>
@@ -855,6 +857,10 @@ function TimelinePage(props: {
         props.viewEndSec,
       ),
     [props.dashboard.focusSegments, props.viewEndSec, props.viewStartSec],
+  )
+  const browserDomainBySegmentId = useMemo(
+    () => buildPrimaryBrowserDomainMap(visibleFocusItems, props.dashboard.browserSegments),
+    [props.dashboard.browserSegments, visibleFocusItems],
   )
   const zoomPresets = [0.25, 0.5, 1, 4]
 
@@ -1044,6 +1050,7 @@ function TimelinePage(props: {
               <div className="detail-segment-scroll">
                 <FocusSegmentList
                   segments={visibleFocusItems}
+                  browserDomainBySegmentId={browserDomainBySegmentId}
                   selectedSegmentId={props.selectedFocusSegmentId}
                   onSelectSegment={handleSelectFocusSegment}
                 />
@@ -1179,6 +1186,7 @@ function SettingsPage(props: {
 
 function FocusSegmentList(props: {
   segments: ChartSegment[]
+  browserDomainBySegmentId: Map<string, string>
   selectedSegmentId: string | null
   onSelectSegment: (segment: ChartSegment) => void
 }) {
@@ -1199,9 +1207,16 @@ function FocusSegmentList(props: {
             onClick={() => props.onSelectSegment(segment)}
             title={`${segment.label}\n${formatClockRange(segment.startSec, segment.endSec)}`}
           >
-            <span className="detail-segment-name">
-              <i style={{ backgroundColor: segment.color }} />
-              {segment.label}
+            <span className="detail-segment-row">
+              <span className="detail-segment-name">
+                <i style={{ backgroundColor: segment.color }} />
+                {segment.label}
+              </span>
+              {segment.isBrowser ? (
+                <span className="detail-segment-domain">
+                  {props.browserDomainBySegmentId.get(segment.id) ?? ''}
+                </span>
+              ) : null}
             </span>
           </button>
         )
@@ -1390,6 +1405,44 @@ function buildVisibleFocusItems(
 
       return right.durationSec - left.durationSec
     })
+}
+
+function buildPrimaryBrowserDomainMap(
+  focusSegments: ChartSegment[],
+  browserSegments: ChartSegment[],
+) {
+  const domainBySegmentId = new Map<string, string>()
+
+  for (const focusSegment of focusSegments) {
+    if (!focusSegment.isBrowser) {
+      continue
+    }
+
+    const domainDurations = new Map<string, number>()
+
+    for (const browserSegment of browserSegments) {
+      const overlapStart = Math.max(focusSegment.startSec, browserSegment.startSec)
+      const overlapEnd = Math.min(focusSegment.endSec, browserSegment.endSec)
+
+      if (overlapEnd <= overlapStart) {
+        continue
+      }
+
+      domainDurations.set(
+        browserSegment.label,
+        (domainDurations.get(browserSegment.label) ?? 0) + (overlapEnd - overlapStart),
+      )
+    }
+
+    const primaryDomain = Array.from(domainDurations.entries())
+      .sort((left, right) => right[1] - left[1])[0]?.[0]
+
+    if (primaryDomain) {
+      domainBySegmentId.set(focusSegment.id, primaryDomain)
+    }
+  }
+
+  return domainBySegmentId
 }
 
 function currentHourInTimezone(timezone: string | null) {
