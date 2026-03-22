@@ -100,14 +100,9 @@ export function CalendarGrid(props: {
                 <span className="calendar-metric-label">活跃</span>
                 <strong className="calendar-duration">{cell.durationLabel ?? '--'}</strong>
               </span>
-              <span className="calendar-secondary-metric">
-                应用 {cell.focusLabel ?? '--'}
-              </span>
+              <span className="calendar-secondary-metric">{cell.metaLabel ?? '暂无记录'}</span>
               {cell.topAppLabel ? (
                 <span className="calendar-top-app">应用 {cell.topAppLabel}</span>
-              ) : null}
-              {cell.topDomainLabel ? (
-                <span className="calendar-top-domain">域名 {cell.topDomainLabel}</span>
               ) : null}
             </button>
           )
@@ -124,6 +119,7 @@ type CalendarCell = {
   durationLabel: string | null
   focusLabel: string | null
   switchLabel: string | null
+  metaLabel: string | null
   topAppLabel: string | null
   topDomainLabel: string | null
   heatClass: string
@@ -154,6 +150,7 @@ function buildCalendarCells(month: string, days: DaySummary[]): CalendarCell[] {
         durationLabel: null,
         focusLabel: null,
         switchLabel: null,
+        metaLabel: null,
         topAppLabel: null,
         topDomainLabel: null,
         heatClass: '',
@@ -169,23 +166,27 @@ function buildCalendarCells(month: string, days: DaySummary[]): CalendarCell[] {
     const heatLevel = maxActive > 0 ? heatTier(activeSeconds, maxActive) : 0
     const topApp = summary?.top_app
     const topDomain = summary?.top_domain
+    const focusLabel =
+      summary && summary.focus_seconds > 0 ? formatDuration(summary.focus_seconds) : null
+    const switchLabel = summary && summary.switch_count > 0 ? `${summary.switch_count} 切` : null
 
     const tooltipLines = [dateStr]
-      if (summary) {
-        tooltipLines.push(`活跃: ${formatDuration(activeSeconds)}`)
-        tooltipLines.push(`应用: ${formatDuration(summary.focus_seconds)}`)
+    if (summary) {
+      tooltipLines.push(`活跃: ${formatDuration(activeSeconds)}`)
+      tooltipLines.push(`应用: ${formatDuration(summary.focus_seconds)}`)
         tooltipLines.push(`切换: ${summary.switch_count} 次`)
         if (topApp) tooltipLines.push(`常用应用: ${topApp.label}`)
         if (topDomain) tooltipLines.push(`常用域名: ${topDomain.label}`)
       }
 
     cells.push({
-      key: dateStr,
+        key: dateStr,
         date: dateStr,
         dayNumber: day,
         durationLabel: activeSeconds > 0 ? formatDuration(activeSeconds) : null,
-        focusLabel: summary && summary.focus_seconds > 0 ? formatDuration(summary.focus_seconds) : null,
-        switchLabel: summary && summary.switch_count > 0 ? `${summary.switch_count} 切` : null,
+        focusLabel,
+        switchLabel,
+        metaLabel: [focusLabel ? `应用 ${focusLabel}` : null, switchLabel].filter(Boolean).join(' · ') || null,
         topAppLabel: topApp ? truncate(topApp.label, 12) : null,
         topDomainLabel: topDomain ? truncate(topDomain.label, 14) : null,
         heatClass: HEAT_CLASSES[heatLevel],
@@ -203,6 +204,7 @@ function buildCalendarCells(month: string, days: DaySummary[]): CalendarCell[] {
         durationLabel: null,
         focusLabel: null,
         switchLabel: null,
+        metaLabel: null,
         topAppLabel: null,
         topDomainLabel: null,
         heatClass: '',

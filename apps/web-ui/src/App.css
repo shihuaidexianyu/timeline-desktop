@@ -1071,7 +1071,7 @@
 
 .calendar-panel {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .calendar-header {
@@ -1113,14 +1113,14 @@
 .calendar-summary-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .calendar-summary-card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 12px 14px;
+  gap: 4px;
+  padding: 9px 11px;
   border: 1px solid rgba(145, 159, 180, 0.18);
   border-radius: 12px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(244, 248, 255, 0.9));
@@ -1128,20 +1128,20 @@
 
 .calendar-summary-card strong {
   font-family: var(--mono-family);
-  font-size: 1.02rem;
+  font-size: 0.92rem;
   color: var(--text-main);
 }
 
 .calendar-summary-card small {
   color: var(--text-soft);
   font-family: var(--mono-family);
-  font-size: 0.72rem;
+  font-size: 0.66rem;
 }
 
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 6px;
+  gap: 5px;
 }
 
 .calendar-weekday {
@@ -1158,9 +1158,9 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 5px;
-  min-height: 106px;
-  padding: 8px;
+  gap: 3px;
+  min-height: 84px;
+  padding: 6px 7px;
   border: 1px solid rgba(145, 159, 180, 0.18);
   border-radius: 10px;
   background: #fff;
@@ -1193,7 +1193,7 @@
 
 .calendar-day-number {
   font-family: var(--mono-family);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 600;
   color: var(--text-main);
 }
@@ -1212,7 +1212,7 @@
   background: rgba(255, 255, 255, 0.62);
   color: var(--text-dim);
   font-family: var(--mono-family);
-  font-size: 0.58rem;
+  font-size: 0.54rem;
   line-height: 1.1;
 }
 
@@ -1225,14 +1225,14 @@
 .calendar-metric-label {
   color: var(--text-dim);
   font-family: var(--mono-family);
-  font-size: 0.58rem;
+  font-size: 0.54rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .calendar-duration {
   font-family: var(--mono-family);
-  font-size: 0.86rem;
+  font-size: 0.76rem;
   font-weight: 600;
   color: var(--text-main);
 }
@@ -1240,7 +1240,7 @@
 .calendar-secondary-metric,
 .calendar-top-app {
   font-family: var(--mono-family);
-  font-size: 0.6rem;
+  font-size: 0.56rem;
   color: var(--text-dim);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1317,7 +1317,7 @@
   }
 
   .calendar-cell {
-    min-height: 92px;
+    min-height: 74px;
   }
 }
 
@@ -1339,12 +1339,13 @@
   }
 
   .calendar-cell {
-    min-height: 84px;
-    padding: 7px;
-    gap: 4px;
+    min-height: 68px;
+    padding: 6px;
+    gap: 3px;
   }
 
-  .calendar-top-domain {
+  .calendar-summary-grid,
+  .calendar-top-app {
     display: none;
   }
 
