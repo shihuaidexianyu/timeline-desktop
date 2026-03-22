@@ -14,3 +14,5 @@ Thumbs.db
 # Repository guides that should stay local
 todo.md
 style.md
+CLAUDE.md
+.claude/settings.local.json
