@@ -479,7 +479,6 @@ function StatsPage(props: {
         <div className="panel page-panel stats-analysis-card">
           <div className="panel-header">
             <div>
-              <p className="section-kicker">分析</p>
               <h2>应用分布</h2>
             </div>
             <RefreshBadge active={props.isTimelineRefreshing} />
@@ -497,7 +496,6 @@ function StatsPage(props: {
         <div className="panel page-panel stats-analysis-card">
           <div className="panel-header">
             <div>
-              <p className="section-kicker">分析</p>
               <h2>域名分布</h2>
             </div>
             <RefreshBadge active={props.isTimelineRefreshing} />
@@ -515,7 +513,6 @@ function StatsPage(props: {
         <div className="panel page-panel stats-calendar-card">
           <div className="panel-header">
             <div>
-              <p className="section-kicker">月度热力图</p>
               <h2>使用热度</h2>
             </div>
             <RefreshBadge active={props.isCalendarRefreshing} />
@@ -532,7 +529,7 @@ function StatsPage(props: {
           ) : props.calendarError ? (
             <div className="state-card error-card">{props.calendarError}</div>
           ) : (
-            <div className="state-card">正在加载该月份的汇总日历…</div>
+            <div className="state-card">加载中…</div>
           )}
         </div>
       </section>
@@ -566,7 +563,6 @@ function WeeklyRhythmCard(props: {
     <article className="showcase-card showcase-card-dashboard">
       <div className="showcase-card-head">
         <div>
-          <p className="section-kicker">周趋势</p>
           <h2>{props.isCurrentDate ? '本周节奏' : '所在周节奏'}</h2>
         </div>
         <div className="card-head-side">
@@ -613,7 +609,6 @@ function WeeklyRhythmCard(props: {
           <span>
             {selectedMetric === 'active' ? '活跃' : '应用'} {formatDuration(selectedDayValue)}
           </span>
-          <small>点击柱子切换日期</small>
         </div>
       ) : null}
     </article>
@@ -632,7 +627,6 @@ function FocusBalanceCard(props: {
     props.dashboard.summary.focusSeconds > 0
       ? props.dashboard.summary.activeSeconds / props.dashboard.summary.focusSeconds
       : 0
-  const appCount = props.dashboard.appSlices.filter((slice) => slice.key !== 'others').length
   const [selectedPresenceKey, setSelectedPresenceKey] = useState<'active' | 'idle' | 'locked'>('active')
   const selectedPresenceLabel =
     selectedPresenceKey === 'active' ? '活跃' : selectedPresenceKey === 'idle' ? '空闲' : '锁定'
@@ -674,15 +668,10 @@ function FocusBalanceCard(props: {
     <article className="showcase-card showcase-card-focus">
       <div className="showcase-card-head">
         <div>
-          <p className="section-kicker">状态平衡</p>
           <h2>{props.isCurrentDate ? '今天状态分布' : '当日状态分布'}</h2>
         </div>
         <RefreshBadge active={props.refreshing} />
       </div>
-
-      <p className="focus-card-copy">
-        用状态环对照活跃、空闲和锁定，把当天的专注效率和使用节奏放在同一视图里。
-      </p>
 
       <div className="showcase-donut-wrap">
         <div className="showcase-compact-donut">
@@ -702,8 +691,6 @@ function FocusBalanceCard(props: {
           />
         </div>
       </div>
-
-      <div className="focus-footnote">{appCount} 个应用被记录</div>
 
       <div className="focus-metric-stack">
         <div className="focus-metric-card">
@@ -1156,7 +1143,7 @@ function SettingsPage(props: {
                     {monitor.last_seen ? `最后活跃 ${new Date(monitor.last_seen).toLocaleTimeString()}` : '等待首次心跳'}
                   </small>
                 </article>
-              )) ?? <div className="empty-card">正在读取监视器状态…</div>}
+              )) ?? <div className="empty-card">读取中…</div>}
             </div>
           </div>
         </div>
@@ -1172,7 +1159,7 @@ function FocusSegmentList(props: {
   onSelectSegment: (segment: ChartSegment) => void
 }) {
   if (props.segments.length === 0) {
-    return <div className="empty-card">当前窗口内没有应用段记录</div>
+    return <div className="empty-card">暂无记录</div>
   }
 
   return (
@@ -1207,7 +1194,7 @@ function FocusSegmentList(props: {
 }
 
 function LoadingState() {
-  return <div className="state-card">正在从本地服务读取图表数据…</div>
+  return <div className="state-card">加载中…</div>
 }
 
 function ErrorState(props: { error: string }) {
