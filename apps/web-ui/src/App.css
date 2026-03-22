@@ -741,6 +741,8 @@
 
 .timeline-panel {
   min-height: 560px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .timeline-panel-actions {
@@ -754,6 +756,19 @@
   min-height: 420px;
   position: sticky;
   top: 18px;
+}
+
+.timeline-page-layout {
+  grid-template-columns: 1fr;
+}
+
+.timeline-page-layout .page-content-side {
+  grid-template-columns: 1fr;
+}
+
+.timeline-page-layout .browser-detail-panel {
+  position: static;
+  top: auto;
 }
 
 .browser-context {

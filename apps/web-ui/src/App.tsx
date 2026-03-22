@@ -877,7 +877,7 @@ function TimelinePage(props: {
 
   return (
     <section className="page-stack">
-      <div className="page-content-layout">
+      <div className="page-content-layout timeline-page-layout">
         <div className="page-content-main">
           <div className="panel page-panel timeline-panel">
             <div className="panel-header">
