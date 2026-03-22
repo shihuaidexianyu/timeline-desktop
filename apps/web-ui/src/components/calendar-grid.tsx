@@ -26,6 +26,7 @@ export function CalendarGrid(props: {
     () => buildCalendarCells(props.month, props.days),
     [props.month, props.days],
   )
+  const monthSummary = useMemo(() => buildMonthSummary(props.days), [props.days])
   const todayStr = todayString()
 
   return (
@@ -46,6 +47,24 @@ export function CalendarGrid(props: {
         >
           ›
         </button>
+      </div>
+
+      <div className="calendar-summary-grid">
+        <article className="calendar-summary-card">
+          <span>本月活跃</span>
+          <strong>{formatDuration(monthSummary.totalActiveSeconds)}</strong>
+          <small>{monthSummary.activeDays} 天有记录</small>
+        </article>
+        <article className="calendar-summary-card">
+          <span>本月应用</span>
+          <strong>{formatDuration(monthSummary.totalFocusSeconds)}</strong>
+          <small>{monthSummary.totalSwitchCount} 次切换</small>
+        </article>
+        <article className="calendar-summary-card">
+          <span>峰值日期</span>
+          <strong>{monthSummary.peakDayLabel}</strong>
+          <small>{monthSummary.peakDayDurationLabel}</small>
+        </article>
       </div>
 
       <div className="calendar-grid">
@@ -71,12 +90,24 @@ export function CalendarGrid(props: {
               title={cell.tooltip}
               onClick={() => props.onSelectDate(cell.date!)}
             >
-              <span className="calendar-day-number">{cell.dayNumber}</span>
-              {cell.durationLabel ? (
-                <span className="calendar-duration">{cell.durationLabel}</span>
-              ) : null}
+              <span className="calendar-cell-head">
+                <span className="calendar-day-number">{cell.dayNumber}</span>
+                {cell.switchLabel ? (
+                  <span className="calendar-switch-badge">{cell.switchLabel}</span>
+                ) : null}
+              </span>
+              <span className="calendar-primary-metric">
+                <span className="calendar-metric-label">活跃</span>
+                <strong className="calendar-duration">{cell.durationLabel ?? '--'}</strong>
+              </span>
+              <span className="calendar-secondary-metric">
+                应用 {cell.focusLabel ?? '--'}
+              </span>
               {cell.topAppLabel ? (
-                <span className="calendar-top-app">{cell.topAppLabel}</span>
+                <span className="calendar-top-app">应用 {cell.topAppLabel}</span>
+              ) : null}
+              {cell.topDomainLabel ? (
+                <span className="calendar-top-domain">域名 {cell.topDomainLabel}</span>
               ) : null}
             </button>
           )
@@ -91,7 +122,10 @@ type CalendarCell = {
   date: string | null
   dayNumber: number | null
   durationLabel: string | null
+  focusLabel: string | null
+  switchLabel: string | null
   topAppLabel: string | null
+  topDomainLabel: string | null
   heatClass: string
   tooltip: string
 }
@@ -115,13 +149,16 @@ function buildCalendarCells(month: string, days: DaySummary[]): CalendarCell[] {
   for (let i = 0; i < startWeekday; i++) {
     cells.push({
       key: `empty-start-${i}`,
-      date: null,
-      dayNumber: null,
-      durationLabel: null,
-      topAppLabel: null,
-      heatClass: '',
-      tooltip: '',
-    })
+        date: null,
+        dayNumber: null,
+        durationLabel: null,
+        focusLabel: null,
+        switchLabel: null,
+        topAppLabel: null,
+        topDomainLabel: null,
+        heatClass: '',
+        tooltip: '',
+      })
   }
 
   for (let day = 1; day <= daysInMonth; day++) {
@@ -134,22 +171,26 @@ function buildCalendarCells(month: string, days: DaySummary[]): CalendarCell[] {
     const topDomain = summary?.top_domain
 
     const tooltipLines = [dateStr]
-    if (summary) {
-      tooltipLines.push(`活跃: ${formatDuration(activeSeconds)}`)
-      tooltipLines.push(`应用: ${formatDuration(summary.focus_seconds)}`)
-      if (topApp) tooltipLines.push(`常用应用: ${topApp.label}`)
-      if (topDomain) tooltipLines.push(`常用域名: ${topDomain.label}`)
-    }
+      if (summary) {
+        tooltipLines.push(`活跃: ${formatDuration(activeSeconds)}`)
+        tooltipLines.push(`应用: ${formatDuration(summary.focus_seconds)}`)
+        tooltipLines.push(`切换: ${summary.switch_count} 次`)
+        if (topApp) tooltipLines.push(`常用应用: ${topApp.label}`)
+        if (topDomain) tooltipLines.push(`常用域名: ${topDomain.label}`)
+      }
 
     cells.push({
       key: dateStr,
-      date: dateStr,
-      dayNumber: day,
-      durationLabel: activeSeconds > 0 ? formatDuration(activeSeconds) : null,
-      topAppLabel: topApp ? truncate(topApp.label, 10) : null,
-      heatClass: HEAT_CLASSES[heatLevel],
-      tooltip: tooltipLines.join('\n'),
-    })
+        date: dateStr,
+        dayNumber: day,
+        durationLabel: activeSeconds > 0 ? formatDuration(activeSeconds) : null,
+        focusLabel: summary && summary.focus_seconds > 0 ? formatDuration(summary.focus_seconds) : null,
+        switchLabel: summary && summary.switch_count > 0 ? `${summary.switch_count} 切` : null,
+        topAppLabel: topApp ? truncate(topApp.label, 12) : null,
+        topDomainLabel: topDomain ? truncate(topDomain.label, 14) : null,
+        heatClass: HEAT_CLASSES[heatLevel],
+        tooltip: tooltipLines.join('\n'),
+      })
   }
 
   // Trailing empty cells to fill the last row
@@ -157,13 +198,16 @@ function buildCalendarCells(month: string, days: DaySummary[]): CalendarCell[] {
   for (let i = 0; i < trailing; i++) {
     cells.push({
       key: `empty-end-${i}`,
-      date: null,
-      dayNumber: null,
-      durationLabel: null,
-      topAppLabel: null,
-      heatClass: '',
-      tooltip: '',
-    })
+        date: null,
+        dayNumber: null,
+        durationLabel: null,
+        focusLabel: null,
+        switchLabel: null,
+        topAppLabel: null,
+        topDomainLabel: null,
+        heatClass: '',
+        tooltip: '',
+      })
   }
 
   return cells
@@ -197,4 +241,33 @@ function shiftMonth(month: string, delta: number): string {
 function truncate(value: string, max: number) {
   if (value.length <= max) return value
   return `${value.slice(0, Math.max(max - 1, 1))}…`
+}
+
+function buildMonthSummary(days: DaySummary[]) {
+  const totalActiveSeconds = days.reduce((sum, day) => sum + day.active_seconds, 0)
+  const totalFocusSeconds = days.reduce((sum, day) => sum + day.focus_seconds, 0)
+  const totalSwitchCount = days.reduce((sum, day) => sum + day.switch_count, 0)
+  const activeDays = days.filter((day) => day.active_seconds > 0).length
+  const peakDay =
+    days.reduce<DaySummary | null>(
+      (current, day) => {
+        if (!current || day.active_seconds > current.active_seconds) {
+          return day
+        }
+        return current
+      },
+      null,
+    ) ?? null
+
+  return {
+    totalActiveSeconds,
+    totalFocusSeconds,
+    totalSwitchCount,
+    activeDays,
+    peakDayLabel: peakDay ? peakDay.date.slice(5) : '--',
+    peakDayDurationLabel:
+      peakDay && peakDay.active_seconds > 0
+        ? `${formatDuration(peakDay.active_seconds)} 活跃`
+        : '暂无活跃记录',
+  }
 }
