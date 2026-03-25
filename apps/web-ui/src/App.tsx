@@ -861,10 +861,6 @@ function TimelinePage(props: {
               <div>
                 <h2>事件时间线</h2>
               </div>
-              <div className="timeline-header-meta">
-                <span className="timeline-meta-pill">窗口 {windowLabel}</span>
-                <span className="timeline-meta-pill">片段 {visibleFocusItems.length}</span>
-              </div>
             </div>
 
             <div className="timeline-primary-chart">
