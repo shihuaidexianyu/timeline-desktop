@@ -37,14 +37,6 @@ type OverviewSegment = {
   opacity: number
 }
 
-type InspectionItem = {
-  id: string
-  label: string
-  detail: string
-  color: string
-  typeLabel: string
-}
-
 type DragState = {
   mode: 'move' | 'resize-start' | 'resize-end'
   startClientX: number
@@ -94,11 +86,6 @@ export function TimelineChart(props: {
     () => buildVisibleItems(layout, props.viewStartSec, props.viewEndSec),
     [layout, props.viewEndSec, props.viewStartSec],
   )
-  const inspectionItems = useMemo(
-    () => (hoveredSec === null ? [] : buildInspectionItems(layout, hoveredSec)),
-    [hoveredSec, layout],
-  )
-
   useEffect(() => {
     const track = axisTrackRef.current
     if (!track) {
@@ -193,31 +180,12 @@ export function TimelineChart(props: {
           </strong>
         </div>
 
-        {hoveredSec === null ? (
-          <div className="timeline-devtools-meta">
-            <span className="timeline-devtools-pill">{props.windowDurationLabel ?? formatDuration(visibleDuration)}</span>
-            {props.windowItemCount !== undefined ? (
-              <span className="timeline-devtools-pill">片段 {props.windowItemCount}</span>
-            ) : null}
-          </div>
-        ) : (
-          <div className="timeline-inspector-summary">
-            <span className="timeline-inspector-time">{formatClock(hoveredSec)}</span>
-            <div className="timeline-inspector-items">
-              {inspectionItems.length > 0 ? (
-                inspectionItems.map((item) => (
-                  <span key={item.id} className="timeline-inspector-item" title={item.detail}>
-                    <i style={{ backgroundColor: item.color }} />
-                    <strong>{item.label}</strong>
-                    <small>{item.typeLabel}</small>
-                  </span>
-                ))
-              ) : (
-                <span className="timeline-inspector-empty">该时刻没有记录</span>
-              )}
-            </div>
-          </div>
-        )}
+        <div className="timeline-devtools-meta">
+          <span className="timeline-devtools-pill">{props.windowDurationLabel ?? formatDuration(visibleDuration)}</span>
+          {props.windowItemCount !== undefined ? (
+            <span className="timeline-devtools-pill">片段 {props.windowItemCount}</span>
+          ) : null}
+        </div>
       </div>
 
       <div className="timeline-waterfall">
@@ -634,32 +602,6 @@ function buildVisibleItems(rows: RowLayout[], viewStartSec: number, viewEndSec: 
 
       return right.durationSec - left.durationSec
     })
-}
-
-function buildInspectionItems(rows: RowLayout[], seconds: number): InspectionItem[] {
-  return rows
-    .filter((row) => row.includeInTable)
-    .map((row) => findSegmentAtTime(row, seconds))
-    .filter((segment): segment is ChartSegment => segment !== null)
-    .map((segment) => ({
-      id: `${segment.id}-inspection`,
-      label: segment.label,
-      detail: segment.detail,
-      color: segment.color,
-      typeLabel: segmentTypeLabel(segment),
-    }))
-}
-
-function findSegmentAtTime(row: RowLayout, seconds: number) {
-  for (const lane of row.lanes) {
-    for (const segment of lane) {
-      if (segment.startSec <= seconds && seconds < segment.endSec) {
-        return segment
-      }
-    }
-  }
-
-  return null
 }
 
 function clipSegment(segment: ChartSegment, viewStartSec: number, viewEndSec: number) {
