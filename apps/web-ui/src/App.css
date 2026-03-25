@@ -523,11 +523,11 @@
 }
 
 .weekly-legend-item.is-active::before {
-  background: #22b693;
+  background: #2fbf9b;
 }
 
 .weekly-legend-item.is-focus::before {
-  background: #7f6bff;
+  background: #7a7ce8;
 }
 
 .weekly-chart-shell {
@@ -581,10 +581,10 @@
 }
 
 .weekly-bar-column:hover .weekly-bar-track {
-  background: rgba(171, 185, 205, 1);
+  background: #c7d0de;
   box-shadow:
-    0 14px 28px rgba(54, 70, 96, 0.2),
-    inset 0 0 0 1px rgba(84, 103, 132, 0.28);
+    0 14px 28px rgba(54, 70, 96, 0.16),
+    inset 0 0 0 1px rgba(74, 98, 137, 0.22);
   transform: translateY(-3px);
 }
 
@@ -593,20 +593,20 @@
 }
 
 .weekly-bar-column:hover .weekly-bar-day {
-  color: #173861;
+  color: #1f2a3d;
   font-weight: 700;
 }
 
 .weekly-bar-column:focus-visible .weekly-bar-track {
-  background: rgba(191, 205, 225, 1);
+  background: #d0d8e6;
   box-shadow:
-    0 0 0 3px rgba(47, 111, 219, 0.18),
+    0 0 0 3px rgba(47, 111, 219, 0.22),
     0 14px 28px rgba(54, 70, 96, 0.18);
   transform: translateY(-3px);
 }
 
 .weekly-bar-column.is-selected .weekly-bar-day {
-  color: #2450a0;
+  color: #2f6fdb;
   font-weight: 700;
 }
 
@@ -616,7 +616,7 @@
   max-width: 34px;
   height: 196px;
   border-radius: 10px;
-  background: rgba(83, 93, 110, 0.18);
+  background: #d4d9e2;
   overflow: hidden;
   transition:
     background-color 0.16s ease,
@@ -630,12 +630,12 @@
   right: 0;
   bottom: 0;
   border-radius: 0;
-  background: linear-gradient(180deg, #8b7dff, #6a59e5);
+  background: linear-gradient(180deg, #8e90ef, #7a7ce8);
   transition: filter 0.16s ease;
 }
 
 .weekly-bar-active {
-  background: linear-gradient(180deg, #43d6b0, #21b38d);
+  background: linear-gradient(180deg, #4dc9aa, #2fbf9b);
   z-index: 1;
 }
 
@@ -643,8 +643,9 @@
   position: absolute;
   left: 0;
   right: 0;
-  background: linear-gradient(180deg, #8b7dff, #6a59e5);
+  background: linear-gradient(180deg, #8e90ef, #7a7ce8);
   border-top: 1px solid rgba(255, 255, 255, 0.16);
+  opacity: 0.88;
   z-index: 2;
 }
 
@@ -655,7 +656,7 @@
   right: 0;
   bottom: -1px;
   height: 8px;
-  background: linear-gradient(180deg, rgba(106, 89, 229, 0), rgba(33, 179, 141, 0.28));
+  background: linear-gradient(180deg, rgba(122, 124, 232, 0), rgba(47, 191, 155, 0.26));
   pointer-events: none;
 }
 
@@ -1087,7 +1088,7 @@
   font-size: 0.74rem;
 }
 
-.settings-config-check > span {
+.settings-config-check>span {
   display: grid;
   gap: 3px;
 }

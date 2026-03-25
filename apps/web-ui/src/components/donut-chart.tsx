@@ -12,7 +12,7 @@ import {
 
 const LABEL_COLOR = '#1d2c43'
 const MUTED_COLOR = '#6f839f'
-const MONO_FAMILY = '"IBM Plex Mono", "SFMono-Regular", Consolas, monospace'
+const MONO_FAMILY = '"JetBrains Mono", "Cascadia Mono", "Consolas", "SFMono-Regular", monospace'
 const PIE_CENTER_X = '50%'
 
 export function DonutChart(props: {
@@ -73,7 +73,11 @@ export function DonutChart(props: {
           },
           emphasis: {
             scale: true,
-            scaleSize: 8,
+            scaleSize: 10,
+            itemStyle: {
+              shadowBlur: 14,
+              shadowColor: 'rgba(28, 50, 86, 0.2)',
+            },
           },
           data: displaySlices.map((slice) => {
             const isActive = isFilterActive(props.filter, props.filterKind, slice.key)
@@ -100,22 +104,22 @@ export function DonutChart(props: {
         {
           type: 'text',
           left: PIE_CENTER_X,
-          top: '43%',
+          top: '41%',
           style: {
             text: props.totalLabel,
             fill: LABEL_COLOR,
-            font: `600 17px ${MONO_FAMILY}`,
+            font: `700 20px ${MONO_FAMILY}`,
             textAlign: 'center',
           },
         },
         {
           type: 'text',
           left: PIE_CENTER_X,
-          top: '53%',
+          top: '52%',
           style: {
-            text: '合计',
+            text: '总计时长',
             fill: MUTED_COLOR,
-            font: `13px ${MONO_FAMILY}`,
+            font: `12px ${MONO_FAMILY}`,
             textAlign: 'center',
           },
         },
@@ -193,6 +197,20 @@ export function CompactDonutChart(props: {
     () => props.slices.filter((slice) => slice.value > 0),
     [props.slices],
   )
+  const emphasizedSlice = useMemo(() => {
+    if (displaySlices.length === 0) {
+      return null
+    }
+
+    if (props.selectedKey) {
+      const selected = displaySlices.find((slice) => slice.key === props.selectedKey)
+      if (selected) {
+        return selected
+      }
+    }
+
+    return displaySlices[0]
+  }, [displaySlices, props.selectedKey])
 
   const option = useMemo<echarts.EChartsOption>(() => {
     return {
@@ -235,7 +253,12 @@ export function CompactDonutChart(props: {
             borderWidth: 1,
           },
           emphasis: {
-            scale: false,
+            scale: true,
+            scaleSize: 7,
+            itemStyle: {
+              shadowBlur: 12,
+              shadowColor: 'rgba(28, 50, 86, 0.2)',
+            },
           },
           data: displaySlices.map((slice) => {
             const isActive = props.selectedKey === slice.key
@@ -260,45 +283,46 @@ export function CompactDonutChart(props: {
         {
           type: 'text',
           left: 'center',
-          top: props.footerLabel ? '39%' : '42%',
+          top: props.footerLabel ? '38%' : '41%',
           style: {
             text: props.totalLabel,
             fill: LABEL_COLOR,
-            font: `600 17px ${MONO_FAMILY}`,
+            font: `700 20px ${MONO_FAMILY}`,
             textAlign: 'center',
           },
         },
         {
           type: 'text',
           left: 'center',
-          top: props.footerLabel ? '50%' : '54%',
+          top: props.footerLabel ? '49%' : '53%',
           style: {
             text: props.secondaryLabel,
-            fill: MUTED_COLOR,
-            font: `12px ${MONO_FAMILY}`,
+            fill: emphasizedSlice?.color ?? MUTED_COLOR,
+            font: `600 12px ${MONO_FAMILY}`,
             textAlign: 'center',
           },
         },
         ...(props.footerLabel
           ? [
-              {
-                type: 'text' as const,
-                left: 'center',
-                top: '59%',
-                style: {
-                  text: props.footerLabel,
-                  fill: MUTED_COLOR,
-                  font: `11px ${MONO_FAMILY}`,
-                  textAlign: 'center',
-                },
+            {
+              type: 'text' as const,
+              left: 'center',
+              top: '61%',
+              style: {
+                text: props.footerLabel,
+                fill: MUTED_COLOR,
+                font: `11px ${MONO_FAMILY}`,
+                textAlign: 'center',
               },
-            ]
+            },
+          ]
           : []),
       ],
     }
   }, [
     displaySlices,
     props.footerLabel,
+    emphasizedSlice,
     props.onSelectKey,
     props.secondaryLabel,
     props.selectedKey,
@@ -325,15 +349,15 @@ export function CompactDonutChart(props: {
       onEvents={
         props.onSelectKey
           ? {
-              click: (params: unknown) => {
-                const slice = getSliceDatum(params)
-                if (!slice) {
-                  return
-                }
+            click: (params: unknown) => {
+              const slice = getSliceDatum(params)
+              if (!slice) {
+                return
+              }
 
-                props.onSelectKey?.(slice.key)
-              },
-            }
+              props.onSelectKey?.(slice.key)
+            },
+          }
           : undefined
       }
       style={{ height: props.height ?? 220, width: '100%' }}

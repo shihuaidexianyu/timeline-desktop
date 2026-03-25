@@ -2,32 +2,35 @@
 
 :root {
   --sans-family:
-    "Segoe UI Variable Text",
-    "Segoe UI",
-    "PingFang SC",
-    "Hiragino Sans GB",
-    "Noto Sans CJK SC",
     "Microsoft YaHei UI",
     "Microsoft YaHei",
+    "PingFang SC",
+    "Hiragino Sans GB",
+    "Noto Sans SC",
+    "Noto Sans CJK SC",
+    "Segoe UI Variable Text",
+    "Segoe UI",
     sans-serif;
   --display-family:
+    "Microsoft YaHei UI",
+    "Microsoft YaHei",
+    "PingFang SC",
+    "Hiragino Sans GB",
+    "Noto Sans SC",
+    "Noto Sans CJK SC",
     "Segoe UI Variable Display",
     "Segoe UI Variable Text",
     "Segoe UI",
-    "PingFang SC",
-    "Hiragino Sans GB",
-    "Noto Sans CJK SC",
-    "Microsoft YaHei UI",
-    "Microsoft YaHei",
     sans-serif;
   --mono-family:
-    "Segoe UI Variable Text",
-    "Segoe UI",
-    "PingFang SC",
-    "Hiragino Sans GB",
-    "Noto Sans CJK SC",
+    "JetBrains Mono",
+    "Cascadia Mono",
+    "Consolas",
+    "SFMono-Regular",
     "Microsoft YaHei UI",
     "Microsoft YaHei",
+    "PingFang SC",
+    "Noto Sans SC",
     sans-serif;
   font-family: var(--sans-family);
   line-height: 1.5;
