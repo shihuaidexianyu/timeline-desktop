@@ -17,6 +17,7 @@ import {
 } from './api'
 import { CalendarGrid } from './components/calendar-grid'
 import { CompactDonutChart, DonutChart } from './components/donut-chart'
+import { TimelineClock } from './components/timeline-clock'
 import { TimelineChart } from './components/timeline-chart'
 import {
   buildDashboardModel,
@@ -358,7 +359,6 @@ function App() {
                 dashboard={dashboard}
                 appFilter={appFilter}
                 selectedDate={resolvedSelectedDate}
-                timezone={agentTimezone ?? timeline?.timezone ?? null}
                 viewStartHour={viewStartHour}
                 viewStartSec={viewStartSec}
                 viewEndSec={viewEndSec}
@@ -778,7 +778,6 @@ function TimelinePage(props: {
   dashboard: DashboardModel
   appFilter: DashboardFilter
   selectedDate: string
-  timezone: string | null
   viewStartHour: number
   viewStartSec: number
   viewEndSec: number
@@ -818,9 +817,6 @@ function TimelinePage(props: {
     ],
     [props.appFilter, props.dashboard.focusSegments, props.dashboard.presenceSegments],
   )
-  const zoomPresets = [0.25, 0.5, 1, 4]
-  const hourAnchors = [9, 13, 18]
-  const panStepHours = props.zoomHours <= 0.25 ? 1 / 12 : Math.max(1 / 12, props.zoomHours / 2)
   const windowDurationSec = props.viewEndSec - props.viewStartSec
   const visibleAppCount = useMemo(
     () => new Set(visibleFocusItems.map((item) => item.key)).size,
@@ -856,23 +852,6 @@ function TimelinePage(props: {
     props.viewStartHour + props.zoomHours,
   )}`
 
-  function applyWindow(nextZoomHours: number, nextStartHour: number) {
-    props.setZoomHours(nextZoomHours)
-    props.setViewStartHour(clampViewStart(normalizeZoomHours(nextStartHour), nextZoomHours))
-  }
-
-  function shiftWindow(direction: -1 | 1) {
-    applyWindow(props.zoomHours, props.viewStartHour + direction * panStepHours)
-  }
-
-  function jumpToHour(centerHour: number) {
-    applyWindow(props.zoomHours, centerHour - props.zoomHours / 2)
-  }
-
-  function jumpToNow() {
-    jumpToHour(currentHourInTimezone(props.timezone))
-  }
-
   return (
     <section className="page-stack">
       <div className="page-content-layout timeline-page-layout">
@@ -888,72 +867,44 @@ function TimelinePage(props: {
               </div>
             </div>
 
-            <div className="timeline-control-bar">
-              <div className="timeline-control-group">
-                <span className="timeline-control-label">缩放</span>
-                {zoomPresets.map((preset) => (
-                  <button
-                    key={preset}
-                    type="button"
-                    className={`timeline-control-button ${Math.abs(props.zoomHours - preset) < 0.001 ? 'is-active' : ''
-                      }`}
-                    onClick={() => {
-                      const centerHour = props.viewStartHour + props.zoomHours / 2
-                      applyWindow(preset, centerHour - preset / 2)
-                    }}
-                  >
-                    {formatZoomPreset(preset)}
-                  </button>
-                ))}
-              </div>
-
-              <div className="timeline-control-group">
-                <span className="timeline-control-label">窗口</span>
-                <span className="timeline-control-hint">步长 {formatZoomPreset(panStepHours)}</span>
-                <button
-                  type="button"
-                  className="timeline-control-button"
-                  onClick={() => shiftWindow(-1)}
-                >
-                  向前
-                </button>
-                <button
-                  type="button"
-                  className="timeline-control-button"
-                  onClick={jumpToNow}
-                >
-                  当前
-                </button>
-                <button
-                  type="button"
-                  className="timeline-control-button"
-                  onClick={() => applyWindow(props.zoomHours, 0)}
-                >
-                  起点
-                </button>
-                <button
-                  type="button"
-                  className="timeline-control-button"
-                  onClick={() => shiftWindow(1)}
-                >
-                  向后
-                </button>
-              </div>
-
-              <div className="timeline-control-group timeline-control-group-anchor">
-                <span className="timeline-control-label">锚点</span>
-                {hourAnchors.map((hour) => (
-                  <button
-                    key={`anchor-${hour}`}
-                    type="button"
-                    className="timeline-control-button"
-                    onClick={() => jumpToHour(hour)}
-                  >
-                    {formatHourLabel(hour)}
-                  </button>
-                ))}
-              </div>
+            <div className="timeline-primary-chart">
+              <TimelineChart
+                rows={timelineRows}
+                viewStartSec={props.viewStartSec}
+                viewEndSec={props.viewEndSec}
+                baseDate={props.selectedDate}
+                highlightedSegmentId={hoveredFocusSegmentId}
+                interactiveZoom={false}
+                minViewHours={MIN_ZOOM_HOURS}
+                maxViewHours={MAX_ZOOM_HOURS}
+                onSegmentHover={setHoveredFocusSegmentId}
+                onViewportChange={(nextStartSec, nextEndSec) => {
+                  const nextZoom = clampZoomHours(
+                    normalizeZoomHours((nextEndSec - nextStartSec) / 3600),
+                  )
+                  const nextStartHour = normalizeZoomHours(nextStartSec / 3600)
+                  props.setZoomHours(nextZoom)
+                  props.setViewStartHour(clampViewStart(nextStartHour, nextZoom))
+                }}
+              />
             </div>
+
+            <TimelineClock
+              focusSegments={props.dashboard.focusSegments}
+              presenceSegments={props.dashboard.presenceSegments}
+              viewStartSec={props.viewStartSec}
+              viewEndSec={props.viewEndSec}
+              minViewSec={MIN_ZOOM_HOURS * 3600}
+              maxViewSec={MAX_ZOOM_HOURS * 3600}
+              onWindowChange={(nextStartSec, nextEndSec) => {
+                const nextZoom = clampZoomHours(
+                  normalizeZoomHours((nextEndSec - nextStartSec) / 3600),
+                )
+                const nextStartHour = normalizeZoomHours(nextStartSec / 3600)
+                props.setZoomHours(nextZoom)
+                props.setViewStartHour(clampViewStart(nextStartHour, nextZoom))
+              }}
+            />
 
             <div className="timeline-snapshot-grid" role="list" aria-label="窗口摘要">
               <article className="timeline-snapshot-card" role="listitem">
@@ -978,25 +929,6 @@ function TimelinePage(props: {
               </article>
             </div>
 
-            <TimelineChart
-              rows={timelineRows}
-              viewStartSec={props.viewStartSec}
-              viewEndSec={props.viewEndSec}
-              baseDate={props.selectedDate}
-              highlightedSegmentId={hoveredFocusSegmentId}
-              interactiveZoom
-              minViewHours={MIN_ZOOM_HOURS}
-              maxViewHours={MAX_ZOOM_HOURS}
-              onSegmentHover={setHoveredFocusSegmentId}
-              onViewportChange={(nextStartSec, nextEndSec) => {
-                const nextZoom = clampZoomHours(
-                  normalizeZoomHours((nextEndSec - nextStartSec) / 3600),
-                )
-                const nextStartHour = normalizeZoomHours(nextStartSec / 3600)
-                props.setZoomHours(nextZoom)
-                props.setViewStartHour(clampViewStart(nextStartHour, nextZoom))
-              }}
-            />
           </div>
         </div>
 
@@ -1396,22 +1328,6 @@ function niceWeeklyAxisMax(seconds: number) {
 
 function formatWeeklyAxisTick(seconds: number) {
   return `${Math.round(seconds / 3600)} 小时`
-}
-
-function formatZoomPreset(hours: number) {
-  const totalMinutes = Math.max(1, Math.round(hours * 60))
-  if (totalMinutes < 60) {
-    return `${totalMinutes} 分钟`
-  }
-
-  const wholeHours = Math.floor(totalMinutes / 60)
-  const remainingMinutes = totalMinutes % 60
-
-  if (remainingMinutes === 0) {
-    return `${wholeHours} 小时`
-  }
-
-  return `${wholeHours} 小时 ${remainingMinutes} 分钟`
 }
 
 function buildVisibleFocusItems(

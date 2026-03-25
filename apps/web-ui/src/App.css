@@ -1071,6 +1071,106 @@
   margin-bottom: 12px;
 }
 
+.timeline-primary-chart {
+  display: flex;
+  flex: 1;
+  min-height: 440px;
+  margin-bottom: 12px;
+}
+
+.timeline-primary-chart .timeline-devtools {
+  flex: 1;
+  min-height: 0;
+}
+
+.timeline-clock-card {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(145, 159, 180, 0.18);
+  border-radius: 14px;
+  background: rgba(250, 252, 255, 0.92);
+}
+
+.timeline-clock-shell {
+  position: relative;
+  width: min(100%, 320px);
+  margin: 0 auto;
+}
+
+.timeline-clock-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  cursor: crosshair;
+}
+
+.timeline-clock-base {
+  fill: rgba(244, 248, 255, 0.96);
+  stroke: rgba(145, 159, 180, 0.2);
+  stroke-width: 1;
+}
+
+.timeline-clock-tick {
+  stroke: rgba(145, 159, 180, 0.3);
+  stroke-width: 1;
+}
+
+.timeline-clock-tick.is-major {
+  stroke: rgba(122, 138, 165, 0.56);
+}
+
+.timeline-clock-hour-label {
+  fill: #6f819c;
+  font-family: var(--mono-family);
+  font-size: 10px;
+  user-select: none;
+}
+
+.timeline-clock-arc {
+  fill: none;
+  stroke-linecap: round;
+  opacity: 0.94;
+}
+
+.timeline-clock-window-arc {
+  fill: none;
+  stroke: rgba(47, 111, 219, 0.95);
+  stroke-width: 10;
+  stroke-linecap: round;
+}
+
+.timeline-clock-handle {
+  fill: #ffffff;
+  stroke: rgba(33, 77, 152, 0.9);
+  stroke-width: 2;
+  cursor: grab;
+}
+
+.timeline-clock-card.is-dragging .timeline-clock-handle {
+  cursor: grabbing;
+}
+
+.timeline-clock-center {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+
+.timeline-clock-center strong {
+  color: #18345a;
+  font-family: var(--mono-family);
+  font-size: 0.8rem;
+}
+
+.timeline-clock-center small {
+  color: #6f819c;
+  font-family: var(--mono-family);
+  font-size: 0.7rem;
+}
+
 .timeline-snapshot-card {
   display: grid;
   grid-template-rows: auto auto auto;
