@@ -39,20 +39,25 @@ export function DonutChart(props: {
   onSelect: (filter: DashboardFilter) => void
 }) {
   /** Show at most 5 slices in the legend; group the rest as "Others". */
+  const isLoading = Boolean(props.loading)
   const displaySlices = useMemo(() => collapseSlices(props.slices, 5), [props.slices])
+  const placeholderSlices = useMemo(() => createPlaceholderSlices(5), [])
   const rankingSlices = useMemo(
     () => props.slices.filter((slice) => slice.key !== 'others').slice(0, 5),
     [props.slices],
   )
+  const chartSlices = isLoading ? placeholderSlices : displaySlices
+  const rankingRows = isLoading ? placeholderSlices : rankingSlices
 
   const option = useMemo<EChartsOption>(() => {
     return {
-      animation: true,
+      animation: !isLoading,
       animationDuration: 180,
       animationDurationUpdate: 180,
       animationEasing: 'cubicOut',
       animationEasingUpdate: 'cubicOut',
       tooltip: {
+        show: !isLoading,
         trigger: 'item',
         appendToBody: true,
         transitionDuration: 0.08,
@@ -99,9 +104,10 @@ export function DonutChart(props: {
               shadowColor: 'rgba(28, 50, 86, 0.2)',
             },
           },
-          data: displaySlices.map((slice) => {
+          data: chartSlices.map((slice) => {
             const isActive = isFilterActive(props.filter, props.filterKind, slice.key)
             const shouldDim =
+              !isLoading &&
               props.filter?.kind === props.filterKind &&
               !isActive &&
               props.filter.key !== slice.key
@@ -126,7 +132,7 @@ export function DonutChart(props: {
           left: PIE_CENTER_X,
           top: '41%',
           style: {
-            text: props.totalLabel,
+            text: isLoading ? '' : props.totalLabel,
             fill: LABEL_COLOR,
             font: `700 20px ${MONO_FAMILY}`,
             textAlign: 'center',
@@ -137,7 +143,7 @@ export function DonutChart(props: {
           left: PIE_CENTER_X,
           top: '52%',
           style: {
-            text: '总计时长',
+            text: isLoading ? '' : '总计时长',
             fill: MUTED_COLOR,
             font: `12px ${MONO_FAMILY}`,
             textAlign: 'center',
@@ -146,63 +152,56 @@ export function DonutChart(props: {
       ],
     }
   }, [
-    displaySlices,
+    chartSlices,
+    isLoading,
     props.filter,
     props.filterKind,
     props.title,
     props.totalLabel,
   ])
 
-  if (props.loading) {
-    return (
-      <div className="donut-card donut-card-skeleton" aria-hidden="true">
-        <div className="donut-visual-skeleton echarts-for-react">
-          <span className="skeleton-block donut-ring-skeleton" />
-          <span className="skeleton-block skeleton-inline donut-total-skeleton donut-total-skeleton-main" />
-          <span className="skeleton-block skeleton-inline donut-caption-skeleton donut-caption-skeleton-main" />
-        </div>
-
-        <div className="ranking-list ranking-list-skeleton">
-          {Array.from({ length: 5 }, (_, index) => (
-            <div key={`donut-row-${index}`} className="ranking-row ranking-row-skeleton">
-              <span className="skeleton-block skeleton-inline skeleton-ranking-name" />
-              <span className="skeleton-block skeleton-inline skeleton-ranking-value" />
-              <span className="skeleton-block skeleton-inline skeleton-ranking-percent" />
-            </div>
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  if (displaySlices.length === 0) {
+  if (!isLoading && displaySlices.length === 0) {
     return <div className="empty-card">没有可展示的数据</div>
   }
 
   return (
-    <div className="donut-card">
-      <ReactEChartsCore
-        echarts={echarts}
-        option={option}
-        notMerge
-        lazyUpdate
-        opts={{ renderer: 'svg' }}
-        onEvents={{
-          click: (params: unknown) => {
-            const slice = getSliceDatum(params)
-            if (!slice || slice.key === 'others') {
-              return
-            }
+    <div className="donut-card" data-loading={isLoading ? 'true' : 'false'}>
+      <div className="donut-visual-shell">
+        <ReactEChartsCore
+          echarts={echarts}
+          option={option}
+          notMerge
+          lazyUpdate
+          opts={{ renderer: 'svg' }}
+          onEvents={
+            isLoading
+              ? undefined
+              : {
+                click: (params: unknown) => {
+                  const slice = getSliceDatum(params)
+                  if (!slice || slice.key === 'others') {
+                    return
+                  }
 
-            const isActive = isFilterActive(props.filter, props.filterKind, slice.key)
-            props.onSelect(isActive ? null : { kind: props.filterKind, key: slice.key })
-          },
-        }}
-        style={{ height: 288, width: '100%', paddingInline: 14 }}
-      />
+                  const isActive = isFilterActive(props.filter, props.filterKind, slice.key)
+                  props.onSelect(isActive ? null : { kind: props.filterKind, key: slice.key })
+                },
+              }
+          }
+          style={{ height: 288, width: '100%', paddingInline: 14 }}
+        />
+
+        {isLoading ? (
+          <div className="skeleton-overlay donut-visual-overlay" aria-hidden="true">
+            <span className="skeleton-block donut-ring-skeleton" />
+            <span className="skeleton-block skeleton-inline donut-total-skeleton donut-total-skeleton-main" />
+            <span className="skeleton-block skeleton-inline donut-caption-skeleton donut-caption-skeleton-main" />
+          </div>
+        ) : null}
+      </div>
 
       <div className="ranking-list">
-        {rankingSlices.map((slice) => {
+        {rankingRows.map((slice) => {
           const isActive = isFilterActive(props.filter, props.filterKind, slice.key)
 
           return (
@@ -210,14 +209,26 @@ export function DonutChart(props: {
               key={`ranking-${slice.id}`}
               type="button"
               className="ranking-row"
+              disabled={isLoading}
+              aria-hidden={isLoading}
               onClick={() => props.onSelect(isActive ? null : { kind: props.filterKind, key: slice.key })}
             >
-              <span className="ranking-name">
-                <i style={{ backgroundColor: slice.color }} />
-                {slice.label}
-              </span>
-              <span>{formatDuration(slice.value)}</span>
-              <span>{slice.percentage.toFixed(1)}%</span>
+              {isLoading ? (
+                <>
+                  <span className="skeleton-block skeleton-inline skeleton-ranking-name" />
+                  <span className="skeleton-block skeleton-inline skeleton-ranking-value" />
+                  <span className="skeleton-block skeleton-inline skeleton-ranking-percent" />
+                </>
+              ) : (
+                <>
+                  <span className="ranking-name">
+                    <i style={{ backgroundColor: slice.color }} />
+                    {slice.label}
+                  </span>
+                  <span>{formatDuration(slice.value)}</span>
+                  <span>{slice.percentage.toFixed(1)}%</span>
+                </>
+              )}
             </button>
           )
         })}
@@ -237,33 +248,37 @@ export function CompactDonutChart(props: {
   emptyLabel?: string
   height?: number
 }) {
+  const isLoading = Boolean(props.loading)
   const displaySlices = useMemo(
     () => props.slices.filter((slice) => slice.value > 0),
     [props.slices],
   )
+  const placeholderSlices = useMemo(() => createPlaceholderSlices(3), [])
+  const chartSlices = isLoading ? placeholderSlices : displaySlices
   const emphasizedSlice = useMemo(() => {
-    if (displaySlices.length === 0) {
+    if (chartSlices.length === 0) {
       return null
     }
 
-    if (props.selectedKey) {
-      const selected = displaySlices.find((slice) => slice.key === props.selectedKey)
+    if (!isLoading && props.selectedKey) {
+      const selected = chartSlices.find((slice) => slice.key === props.selectedKey)
       if (selected) {
         return selected
       }
     }
 
-    return displaySlices[0]
-  }, [displaySlices, props.selectedKey])
+    return chartSlices[0]
+  }, [chartSlices, isLoading, props.selectedKey])
 
   const option = useMemo<EChartsOption>(() => {
     return {
-      animation: true,
+      animation: !isLoading,
       animationDuration: 180,
       animationDurationUpdate: 180,
       animationEasing: 'cubicOut',
       animationEasingUpdate: 'cubicOut',
       tooltip: {
+        show: !isLoading,
         trigger: 'item',
         appendToBody: true,
         transitionDuration: 0.08,
@@ -311,9 +326,10 @@ export function CompactDonutChart(props: {
               shadowColor: 'rgba(28, 50, 86, 0.2)',
             },
           },
-          data: displaySlices.map((slice) => {
+          data: chartSlices.map((slice) => {
             const isActive = props.selectedKey === slice.key
-            const shouldDim = props.selectedKey !== null && props.selectedKey !== undefined && !isActive
+            const shouldDim =
+              !isLoading && props.selectedKey !== null && props.selectedKey !== undefined && !isActive
 
             return {
               value: slice.value,
@@ -335,7 +351,7 @@ export function CompactDonutChart(props: {
           left: 'center',
           top: props.footerLabel ? '38%' : '41%',
           style: {
-            text: props.totalLabel,
+            text: isLoading ? '' : props.totalLabel,
             fill: LABEL_COLOR,
             font: `700 20px ${MONO_FAMILY}`,
             textAlign: 'center',
@@ -347,7 +363,7 @@ export function CompactDonutChart(props: {
           left: 'center',
           top: props.footerLabel ? '49%' : '53%',
           style: {
-            text: props.secondaryLabel,
+            text: isLoading ? '' : props.secondaryLabel,
             fill: emphasizedSlice?.color ?? MUTED_COLOR,
             font: `600 12px ${MONO_FAMILY}`,
             textAlign: 'center',
@@ -361,7 +377,7 @@ export function CompactDonutChart(props: {
               left: 'center',
               top: '61%',
               style: {
-                text: props.footerLabel,
+                text: isLoading ? '' : props.footerLabel,
                 fill: MUTED_COLOR,
                 font: `11px ${MONO_FAMILY}`,
                 textAlign: 'center',
@@ -372,31 +388,17 @@ export function CompactDonutChart(props: {
       ],
     }
   }, [
-    displaySlices,
+    chartSlices,
     props.footerLabel,
     emphasizedSlice,
+    isLoading,
     props.onSelectKey,
     props.secondaryLabel,
     props.selectedKey,
     props.totalLabel,
   ])
 
-  if (props.loading) {
-    return (
-      <div
-        className="compact-donut-empty compact-donut-skeleton"
-        aria-hidden="true"
-        style={{ height: props.height ?? 232 }}
-      >
-        <span className="skeleton-block donut-ring-skeleton donut-ring-skeleton-compact" />
-        <span className="skeleton-block skeleton-inline donut-total-skeleton donut-total-skeleton-compact" />
-        <span className="skeleton-block skeleton-inline donut-caption-skeleton donut-caption-skeleton-compact" />
-        <span className="skeleton-block skeleton-inline donut-footer-skeleton" />
-      </div>
-    )
-  }
-
-  if (displaySlices.length === 0) {
+  if (!isLoading && displaySlices.length === 0) {
     return (
       <div
         className="empty-card compact-donut-empty"
@@ -408,28 +410,39 @@ export function CompactDonutChart(props: {
   }
 
   return (
-    <ReactEChartsCore
-      echarts={echarts}
-      option={option}
-      notMerge
-      lazyUpdate
-      opts={{ renderer: 'svg' }}
-      onEvents={
-        props.onSelectKey
-          ? {
-            click: (params: unknown) => {
-              const slice = getSliceDatum(params)
-              if (!slice) {
-                return
-              }
+    <div className="compact-donut-shell" data-loading={isLoading ? 'true' : 'false'}>
+      <ReactEChartsCore
+        echarts={echarts}
+        option={option}
+        notMerge
+        lazyUpdate
+        opts={{ renderer: 'svg' }}
+        onEvents={
+          !isLoading && props.onSelectKey
+            ? {
+              click: (params: unknown) => {
+                const slice = getSliceDatum(params)
+                if (!slice) {
+                  return
+                }
 
-              props.onSelectKey?.(slice.key)
-            },
-          }
-          : undefined
-      }
-      style={{ height: props.height ?? 220, width: '100%' }}
-    />
+                props.onSelectKey?.(slice.key)
+              },
+            }
+            : undefined
+        }
+        style={{ height: props.height ?? 220, width: '100%' }}
+      />
+
+      {isLoading ? (
+        <div className="skeleton-overlay compact-donut-overlay" aria-hidden="true">
+          <span className="skeleton-block donut-ring-skeleton donut-ring-skeleton-compact" />
+          <span className="skeleton-block skeleton-inline donut-total-skeleton donut-total-skeleton-compact" />
+          <span className="skeleton-block skeleton-inline donut-caption-skeleton donut-caption-skeleton-compact" />
+          <span className="skeleton-block skeleton-inline donut-footer-skeleton" />
+        </div>
+      ) : null}
+    </div>
   )
 }
 
@@ -482,4 +495,18 @@ function collapseSlices(slices: DonutSlice[], keepTopN: number) {
       color: '#94a3b8',
     },
   ]
+}
+
+function createPlaceholderSlices(count: number): DonutSlice[] {
+  const palette = ['#dbe4f1', '#d1dbe9', '#c8d4e5', '#d7e0ed', '#ccd7e8']
+  const normalizedCount = Math.max(count, 1)
+
+  return Array.from({ length: normalizedCount }, (_, index) => ({
+    id: `placeholder-${index}`,
+    key: `placeholder-${index}`,
+    label: '加载中',
+    value: 1,
+    percentage: 100 / normalizedCount,
+    color: palette[index % palette.length],
+  }))
 }

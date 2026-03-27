@@ -29,92 +29,62 @@ export function CalendarGrid(props: {
     [props.days, props.selectedDate],
   )
   const monthSummary = useMemo(() => buildMonthSummary(props.days), [props.days])
-
-  if (props.loading) {
-    return (
-      <div className="calendar-panel calendar-panel-compact calendar-panel-skeleton" aria-hidden="true">
-        <div className="calendar-header">
-          <span className="skeleton-block calendar-nav-button calendar-nav-button-skeleton" />
-          <div className="calendar-header-copy calendar-header-copy-skeleton">
-            <span className="skeleton-block skeleton-inline skeleton-calendar-title" />
-            <span className="skeleton-block skeleton-inline skeleton-calendar-subtitle" />
-          </div>
-          <span className="skeleton-block calendar-nav-button calendar-nav-button-skeleton" />
-        </div>
-
-        <div className="calendar-grid calendar-grid-compact">
-          {Array.from({ length: 7 }, (_, index) => (
-            <span key={`weekday-skeleton-${index}`} className="skeleton-block skeleton-inline skeleton-calendar-weekday" />
-          ))}
-
-          {loadingCells.map((cell) =>
-            cell.date ? (
-              <span
-                key={`calendar-cell-skeleton-${cell.key}`}
-                className="calendar-cell calendar-cell-compact calendar-cell-skeleton"
-              />
-            ) : (
-              <span
-                key={`calendar-cell-skeleton-${cell.key}`}
-                className="calendar-cell calendar-cell-compact is-empty calendar-cell-skeleton-empty"
-              />
-            ),
-          )}
-        </div>
-
-        <div className="calendar-legend calendar-legend-skeleton">
-          <span className="skeleton-block skeleton-inline skeleton-calendar-legend-label" />
-          <div className="calendar-legend-swatches" aria-hidden="true">
-            {HEAT_CLASSES.map((heatClass) => (
-              <i key={`legend-${heatClass}`} className={`calendar-legend-swatch ${heatClass} calendar-legend-swatch-skeleton`} />
-            ))}
-          </div>
-          <span className="skeleton-block skeleton-inline skeleton-calendar-legend-label" />
-        </div>
-
-        <div className="calendar-selection-summary calendar-selection-summary-skeleton">
-          <span className="skeleton-block skeleton-inline skeleton-calendar-selection-title" />
-          <span className="skeleton-block skeleton-inline skeleton-calendar-selection-copy" />
-        </div>
-      </div>
-    )
-  }
+  const isLoading = Boolean(props.loading)
+  const cellsToRender = isLoading ? loadingCells : cells
 
   return (
-    <div className="calendar-panel calendar-panel-compact">
+    <div
+      className={`calendar-panel calendar-panel-compact ${isLoading ? 'calendar-panel-skeleton' : ''}`}
+      aria-hidden={isLoading ? 'true' : undefined}
+      data-loading={isLoading ? 'true' : 'false'}
+    >
       <div className="calendar-header">
         <button
           type="button"
           className="calendar-nav-button"
           aria-label="上一月"
+          disabled={isLoading}
           onClick={() => props.onMonthChange(shiftMonth(props.month, -1))}
         >
-          ‹
+          {isLoading ? '' : '‹'}
         </button>
-        <div className="calendar-header-copy">
-          <strong className="calendar-month-label">{props.month}</strong>
-          <small>
-            本月活跃 {formatDuration(monthSummary.totalActiveSeconds)} · {monthSummary.activeDays} 天
-          </small>
+        <div className={`calendar-header-copy ${isLoading ? 'calendar-header-copy-skeleton' : ''}`}>
+          {isLoading ? (
+            <span className="skeleton-block skeleton-inline skeleton-calendar-title" />
+          ) : (
+            <strong className="calendar-month-label">{props.month}</strong>
+          )}
+          {isLoading ? (
+            <span className="skeleton-block skeleton-inline skeleton-calendar-subtitle" />
+          ) : (
+            <small>
+              本月活跃 {formatDuration(monthSummary.totalActiveSeconds)} · {monthSummary.activeDays} 天
+            </small>
+          )}
         </div>
         <button
           type="button"
           className="calendar-nav-button"
           aria-label="下一月"
+          disabled={isLoading}
           onClick={() => props.onMonthChange(shiftMonth(props.month, 1))}
         >
-          ›
+          {isLoading ? '' : '›'}
         </button>
       </div>
 
       <div className="calendar-grid calendar-grid-compact">
         {WEEKDAY_LABELS.map((label) => (
           <div key={label} className="calendar-weekday">
-            {label}
+            {isLoading ? (
+              <span className="skeleton-block skeleton-inline skeleton-calendar-weekday" />
+            ) : (
+              label
+            )}
           </div>
         ))}
 
-        {cells.map((cell) => {
+        {cellsToRender.map((cell) => {
           if (!cell.date) {
             return <div key={cell.key} className="calendar-cell calendar-cell-compact is-empty" />
           }
@@ -129,33 +99,53 @@ export function CalendarGrid(props: {
               className={`calendar-cell calendar-cell-compact ${cell.heatClass} ${
                 isSelected ? 'is-selected' : ''
               } ${isToday ? 'is-today' : ''}`}
-              aria-label={cell.tooltip}
-              title={cell.tooltip}
+              aria-label={isLoading ? '加载中' : cell.tooltip}
+              title={isLoading ? '加载中' : cell.tooltip}
+              disabled={isLoading}
               onClick={() => props.onSelectDate(cell.date!)}
             >
-              <span className="calendar-day-number">{cell.dayNumber}</span>
+              {isLoading ? null : <span className="calendar-day-number">{cell.dayNumber}</span>}
             </button>
           )
         })}
       </div>
 
-      <div className="calendar-legend">
-        <span>少</span>
+      <div className={`calendar-legend ${isLoading ? 'calendar-legend-skeleton' : ''}`}>
+        {isLoading ? (
+          <span className="skeleton-block skeleton-inline skeleton-calendar-legend-label" />
+        ) : (
+          <span>少</span>
+        )}
         <div className="calendar-legend-swatches" aria-hidden="true">
           {HEAT_CLASSES.map((heatClass) => (
-            <i key={heatClass} className={`calendar-legend-swatch ${heatClass}`} />
+            <i
+              key={heatClass}
+              className={`calendar-legend-swatch ${heatClass} ${isLoading ? 'calendar-legend-swatch-skeleton' : ''}`}
+            />
           ))}
         </div>
-        <span>多</span>
+        {isLoading ? (
+          <span className="skeleton-block skeleton-inline skeleton-calendar-legend-label" />
+        ) : (
+          <span>多</span>
+        )}
       </div>
 
-      <div className="calendar-selection-summary">
-        <strong>{props.selectedDate}</strong>
-        <span>
-          {selectedSummary
-            ? `活跃 ${formatDuration(selectedSummary.active_seconds)}`
-            : '暂无活动记录'}
-        </span>
+      <div className={`calendar-selection-summary ${isLoading ? 'calendar-selection-summary-skeleton' : ''}`}>
+        {isLoading ? (
+          <span className="skeleton-block skeleton-inline skeleton-calendar-selection-title" />
+        ) : (
+          <strong>{props.selectedDate}</strong>
+        )}
+        {isLoading ? (
+          <span className="skeleton-block skeleton-inline skeleton-calendar-selection-copy" />
+        ) : (
+          <span>
+            {selectedSummary
+              ? `活跃 ${formatDuration(selectedSummary.active_seconds)}`
+              : '暂无活动记录'}
+          </span>
+        )}
       </div>
     </div>
   )

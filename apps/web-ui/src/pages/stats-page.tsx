@@ -137,9 +137,10 @@ function WeeklyRhythmCard(props: {
     const weekFocusTotal = props.periodSummary?.week.focus_seconds ?? 0
     const monthActiveTotal = props.periodSummary?.month.active_seconds ?? 0
     const monthFocusTotal = props.periodSummary?.month.focus_seconds ?? 0
+    const bars = props.loading ? createWeeklySkeletonBars() : props.weekBars
 
     return (
-        <article className="showcase-card showcase-card-dashboard">
+        <article className="showcase-card showcase-card-dashboard" data-loading={props.loading ? 'true' : 'false'}>
             <div className="showcase-card-head">
                 <div>
                     <h2>本周节奏</h2>
@@ -154,78 +155,38 @@ function WeeklyRhythmCard(props: {
             </div>
 
             <div className="weekly-summary-row">
-                {props.loading ? (
-                    <>
-                        <div className="weekly-summary-skeleton">
-                            <span className="skeleton-block skeleton-inline skeleton-stat-value" />
-                            <span className="skeleton-block skeleton-inline skeleton-stat-caption" />
-                        </div>
-                        <div className="weekly-summary-skeleton">
-                            <span className="skeleton-block skeleton-inline skeleton-stat-value" />
-                            <span className="skeleton-block skeleton-inline skeleton-stat-caption" />
-                        </div>
-                    </>
-                ) : (
-                    <>
-                        <div>
-                            <strong>{formatDuration(weekActiveTotal)}</strong>
-                            <small>本周活跃 · 当月 {formatDuration(monthActiveTotal)}</small>
-                        </div>
-                        <div>
-                            <strong>{formatDuration(weekFocusTotal)}</strong>
-                            <small>本周应用 · 当月 {formatDuration(monthFocusTotal)}</small>
-                        </div>
-                    </>
-                )}
+                <div className={props.loading ? 'weekly-summary-skeleton' : undefined}>
+                    {props.loading ? (
+                        <span className="skeleton-block skeleton-inline skeleton-stat-value" />
+                    ) : (
+                        <strong>{formatDuration(weekActiveTotal)}</strong>
+                    )}
+                    {props.loading ? (
+                        <span className="skeleton-block skeleton-inline skeleton-stat-caption" />
+                    ) : (
+                        <small>本周活跃 · 当月 {formatDuration(monthActiveTotal)}</small>
+                    )}
+                </div>
+
+                <div className={props.loading ? 'weekly-summary-skeleton' : undefined}>
+                    {props.loading ? (
+                        <span className="skeleton-block skeleton-inline skeleton-stat-value" />
+                    ) : (
+                        <strong>{formatDuration(weekFocusTotal)}</strong>
+                    )}
+                    {props.loading ? (
+                        <span className="skeleton-block skeleton-inline skeleton-stat-caption" />
+                    ) : (
+                        <small>本周应用 · 当月 {formatDuration(monthFocusTotal)}</small>
+                    )}
+                </div>
             </div>
 
-            {props.loading ? (
-                <div className="weekly-chart-shell weekly-chart-shell-skeleton" aria-hidden="true">
-                    <div className="weekly-chart-main weekly-chart-main-skeleton">
-                        {[100, 50, 0].map((position) => (
-                            <span
-                                key={`weekly-grid-skeleton-${position}`}
-                                className="weekly-grid-line weekly-grid-line-skeleton"
-                                style={{ bottom: `${position}%` }}
-                            />
-                        ))}
-                        <div className="weekly-bars weekly-bars-skeleton">
-                            {[
-                                { active: '38%', extra: '14%' },
-                                { active: '62%', extra: '18%' },
-                                { active: '24%', extra: '0%' },
-                                { active: '74%', extra: '10%' },
-                                { active: '54%', extra: '0%' },
-                                { active: '34%', extra: '22%' },
-                                { active: '48%', extra: '12%' },
-                            ].map((bar, index) => (
-                                <div key={`weekly-skeleton-${index}`} className="weekly-bar-column weekly-bar-column-skeleton">
-                                    <div className="weekly-bar-track weekly-bar-track-skeleton">
-                                        <span
-                                            className="weekly-bar weekly-bar-focus-base skeleton-block is-cap"
-                                            style={{ height: `calc(${bar.active} + ${bar.extra})` }}
-                                        />
-                                        <span
-                                            className="weekly-bar weekly-bar-active skeleton-block is-cap"
-                                            style={{
-                                                height: bar.active,
-                                            }}
-                                        />
-                                    </div>
-                                    <span className="skeleton-block skeleton-inline skeleton-weekday-label" />
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                    <div className="weekly-axis weekly-axis-skeleton">
-                        {Array.from({ length: 3 }, (_, index) => (
-                            <span key={`weekly-axis-${index}`} className="skeleton-block skeleton-inline skeleton-axis-label" />
-                        ))}
-                    </div>
-                </div>
-            ) : (
-                <WeeklyBarChart bars={props.weekBars} onSelectDate={props.onSelectDate} />
-            )}
+            <WeeklyBarChart
+                bars={bars}
+                onSelectDate={props.onSelectDate}
+                loading={props.loading}
+            />
         </article>
     )
 }
@@ -393,6 +354,7 @@ function FocusBalanceCard(props: {
 function WeeklyBarChart(props: {
     bars: WeekBarDatum[]
     onSelectDate: (date: string) => void
+    loading?: boolean
 }) {
     const minVisualBarPercent = 1.2
     const maxValue = Math.max(
@@ -403,17 +365,17 @@ function WeeklyBarChart(props: {
     const axisTicks = [axisMaxValue, axisMaxValue / 2, 0]
 
     return (
-        <div className="weekly-chart-shell">
+        <div className={`weekly-chart-shell ${props.loading ? 'weekly-chart-shell-skeleton' : ''}`} aria-hidden={props.loading ? 'true' : undefined}>
             <div className="weekly-chart-main">
                 {axisTicks.map((tick) => (
                     <span
                         key={tick}
-                        className="weekly-grid-line"
+                        className={`weekly-grid-line ${props.loading ? 'weekly-grid-line-skeleton' : ''}`}
                         style={{ bottom: `${axisMaxValue === 0 ? 0 : (tick / axisMaxValue) * 100}%` }}
                     />
                 ))}
 
-                <div className="weekly-bars">
+                <div className={`weekly-bars ${props.loading ? 'weekly-bars-skeleton' : ''}`}>
                     {props.bars.map((bar) => {
                         const normalizedFocusSeconds = Math.max(bar.focusSeconds, bar.activeSeconds)
                         const activeBarHeightPercent = bar.activeSeconds > 0
@@ -429,41 +391,66 @@ function WeeklyBarChart(props: {
                             <button
                                 key={bar.date}
                                 type="button"
-                                className={`weekly-bar-column ${bar.isSelected ? 'is-selected' : ''}`}
-                                onClick={() => props.onSelectDate(bar.date)}
+                                className={`weekly-bar-column ${bar.isSelected ? 'is-selected' : ''} ${props.loading ? 'weekly-bar-column-skeleton' : ''}`}
+                                onClick={() => {
+                                    if (!props.loading) {
+                                        props.onSelectDate(bar.date)
+                                    }
+                                }}
+                                disabled={props.loading}
                                 aria-pressed={bar.isSelected}
                                 aria-label={`${bar.date}，活跃 ${formatDuration(bar.activeSeconds)}，应用 ${formatDuration(normalizedFocusSeconds)}`}
                                 title={`${bar.date} 活跃 ${formatDuration(bar.activeSeconds)} · 应用 ${formatDuration(normalizedFocusSeconds)}`}
                             >
-                                <div className="weekly-bar-track">
+                                <div className={`weekly-bar-track ${props.loading ? 'weekly-bar-track-skeleton' : ''}`}>
                                     <div
-                                        className="weekly-bar weekly-bar-focus-base is-cap"
+                                        className={`weekly-bar weekly-bar-focus-base is-cap ${props.loading ? 'skeleton-block' : ''}`}
                                         style={{ height: focusBarHeight }}
                                     />
                                     <div
-                                        className="weekly-bar weekly-bar-active is-cap"
+                                        className={`weekly-bar weekly-bar-active is-cap ${props.loading ? 'skeleton-block' : ''}`}
                                         style={{
                                             height: activeBarHeight,
                                             bottom: 0,
                                         }}
                                     />
                                 </div>
-                                <span className="weekly-bar-day">{bar.dayLabel}</span>
+                                {props.loading ? (
+                                    <span className="skeleton-block skeleton-inline skeleton-weekday-label" />
+                                ) : (
+                                    <span className="weekly-bar-day">{bar.dayLabel}</span>
+                                )}
                             </button>
                         )
                     })}
                 </div>
             </div>
 
-            <div className="weekly-axis">
+            <div className={`weekly-axis ${props.loading ? 'weekly-axis-skeleton' : ''}`}>
                 {axisTicks.map((tick) => (
-                    <span key={`label-${tick}`} className="weekly-axis-label">
-                        {formatWeeklyAxisTick(tick)}
-                    </span>
+                    props.loading ? (
+                        <span key={`label-${tick}`} className="skeleton-block skeleton-inline skeleton-axis-label" />
+                    ) : (
+                        <span key={`label-${tick}`} className="weekly-axis-label">
+                            {formatWeeklyAxisTick(tick)}
+                        </span>
+                    )
                 ))}
             </div>
         </div>
     )
+}
+
+function createWeeklySkeletonBars(): WeekBarDatum[] {
+    return [
+        { date: 'skeleton-1', dayLabel: '一', activeSeconds: 3.6 * 3600, focusSeconds: 4.8 * 3600, isSelected: false },
+        { date: 'skeleton-2', dayLabel: '二', activeSeconds: 5.4 * 3600, focusSeconds: 6.8 * 3600, isSelected: false },
+        { date: 'skeleton-3', dayLabel: '三', activeSeconds: 3.2 * 3600, focusSeconds: 3.4 * 3600, isSelected: false },
+        { date: 'skeleton-4', dayLabel: '四', activeSeconds: 5.2 * 3600, focusSeconds: 5.2 * 3600, isSelected: false },
+        { date: 'skeleton-5', dayLabel: '五', activeSeconds: 2.0 * 3600, focusSeconds: 2.6 * 3600, isSelected: false },
+        { date: 'skeleton-6', dayLabel: '六', activeSeconds: 0, focusSeconds: 0, isSelected: false },
+        { date: 'skeleton-7', dayLabel: '日', activeSeconds: 0, focusSeconds: 0, isSelected: false },
+    ]
 }
 
 function sumSlices(slices: DonutSlice[]) {

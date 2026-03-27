@@ -76,13 +76,20 @@ export function TimelineChart(props: {
   const minZoomSec = Math.round((props.minViewHours ?? 1 / 12) * 3600)
   const maxZoomSec = Math.round((props.maxViewHours ?? 24) * 3600)
   const visibleDuration = props.viewEndSec - props.viewStartSec
+  const isLoading = Boolean(props.loading)
 
   const layout = useMemo(() => buildRows(props.rows), [props.rows])
+  const skeletonLayout = useMemo(() => createTimelineSkeletonLayout(), [])
+  const renderedLayout = isLoading ? skeletonLayout : layout
   const ticks = useMemo(
     () => buildTicks(props.viewStartSec, props.viewEndSec, axisTrackWidth),
     [axisTrackWidth, props.viewEndSec, props.viewStartSec],
   )
-  const overviewSegments = useMemo(() => buildOverviewSegments(layout), [layout])
+  const renderedTicks = useMemo(
+    () => (isLoading ? createSkeletonTicks(props.viewStartSec, props.viewEndSec) : ticks),
+    [isLoading, props.viewEndSec, props.viewStartSec, ticks],
+  )
+  const overviewSegments = useMemo(() => buildOverviewSegments(renderedLayout), [renderedLayout])
   const visibleItems = useMemo(
     () => buildVisibleItems(layout, props.viewStartSec, props.viewEndSec),
     [layout, props.viewEndSec, props.viewStartSec],
@@ -161,144 +168,69 @@ export function TimelineChart(props: {
     }
   }, [maxZoomSec, minZoomSec, props, visibleDuration])
 
-  if (props.loading) {
-    return (
-      <section className="timeline-devtools timeline-devtools-skeleton" aria-hidden="true">
-        <div className="timeline-devtools-head">
-          <div className="timeline-devtools-summary">
-            <span className="skeleton-block skeleton-inline skeleton-timeline-window" />
-          </div>
-
-          <div className="timeline-devtools-meta">
-            <span className="skeleton-block skeleton-inline skeleton-timeline-pill" />
-            <span className="skeleton-block skeleton-inline skeleton-timeline-pill" />
-          </div>
-        </div>
-
-        <div className="timeline-waterfall timeline-waterfall-skeleton">
-          <div className="timeline-axis timeline-axis-skeleton">
-            <div className="timeline-axis-label">
-              <span className="skeleton-block skeleton-inline skeleton-axis-title" />
-            </div>
-            <div className="timeline-axis-track timeline-axis-track-skeleton">
-              {[0, 20, 40, 60, 80, 100].map((position, index) => (
-                <div
-                  key={`timeline-tick-${index}`}
-                  className="timeline-axis-tick timeline-axis-tick-skeleton"
-                  style={{ left: `${position}%` }}
-                >
-                  <span className="skeleton-block skeleton-inline skeleton-timeline-tick" />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="timeline-waterfall-body timeline-waterfall-body-skeleton">
-            {[
-              {
-                key: 'focus',
-                lanes: [
-                  [
-                    { left: '4%', width: '18%' },
-                    { left: '31%', width: '26%' },
-                    { left: '74%', width: '12%' },
-                  ],
-                  [
-                    { left: '12%', width: '20%' },
-                    { left: '42%', width: '15%' },
-                  ],
-                ],
-              },
-              {
-                key: 'presence',
-                lanes: [[
-                  { left: '8%', width: '24%' },
-                  { left: '36%', width: '18%' },
-                  { left: '61%', width: '21%' },
-                ]],
-              },
-            ].map((row, rowIndex) => (
-              <div key={`timeline-row-${row.key}`} className="timeline-row-block timeline-row-block-skeleton">
-                <div className="timeline-row-head">
-                  <span className="skeleton-block skeleton-inline skeleton-timeline-row-label" />
-                  {rowIndex === 0 ? (
-                    <span className="skeleton-block skeleton-inline skeleton-timeline-row-meta" />
-                  ) : null}
-                </div>
-                <div className="timeline-row-lanes timeline-row-lanes-skeleton">
-                  {row.lanes.map((lane, laneIndex) => (
-                    <div key={`${row.key}-lane-${laneIndex}`} className="timeline-lane">
-                      {[0, 20, 40, 60, 80, 100].map((position, tickIndex) => (
-                        <span
-                          key={`${row.key}-${laneIndex}-${tickIndex}`}
-                          className="timeline-lane-grid"
-                          style={{ left: `${position}%` }}
-                        />
-                      ))}
-
-                      {lane.map((segment, segmentIndex) => (
-                        <span
-                          key={`${row.key}-${laneIndex}-${segmentIndex}`}
-                          className="timeline-bar timeline-bar-skeleton skeleton-block"
-                          style={{
-                            left: segment.left,
-                            width: segment.width,
-                          }}
-                        />
-                      ))}
-                    </div>
-                  ))}
-
-                  {rowIndex === 0 ? (
-                    <span
-                      className="timeline-inspector-line timeline-inspector-line-skeleton"
-                      style={{ left: '52%' }}
-                    />
-                  ) : null}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-    )
-  }
-
-  if (layout.length === 0) {
+  if (!isLoading && layout.length === 0) {
     return <div className="empty-card">没有可展示的时间线数据</div>
   }
 
   return (
     <section
-      className="timeline-devtools"
-      onPointerLeave={() => {
-        setHoveredSec(null)
-        setHoveredAxisLeftPx(null)
-        setHoveredLaneLeftPx(null)
-      }}
+      className={`timeline-devtools ${isLoading ? 'timeline-devtools-skeleton' : ''}`}
+      data-loading={isLoading ? 'true' : 'false'}
+      aria-hidden={isLoading ? 'true' : undefined}
+      onPointerLeave={
+        isLoading
+          ? undefined
+          : () => {
+            setHoveredSec(null)
+            setHoveredAxisLeftPx(null)
+            setHoveredLaneLeftPx(null)
+          }
+      }
     >
       <div className="timeline-devtools-head">
         <div className="timeline-devtools-summary">
-          <strong>
-            {props.windowLabel ?? `${formatClock(props.viewStartSec)} - ${formatClock(props.viewEndSec)}`}
-          </strong>
+          {isLoading ? (
+            <span className="skeleton-block skeleton-inline skeleton-timeline-window" />
+          ) : (
+            <strong>
+              {props.windowLabel ?? `${formatClock(props.viewStartSec)} - ${formatClock(props.viewEndSec)}`}
+            </strong>
+          )}
         </div>
 
         <div className="timeline-devtools-meta">
-          <span className="timeline-devtools-pill">{props.windowDurationLabel ?? formatDuration(visibleDuration)}</span>
-          {props.windowItemCount !== undefined ? (
-            <span className="timeline-devtools-pill">片段 {props.windowItemCount}</span>
-          ) : null}
+          {isLoading ? (
+            <>
+              <span className="skeleton-block skeleton-inline skeleton-timeline-pill" />
+              <span className="skeleton-block skeleton-inline skeleton-timeline-pill" />
+            </>
+          ) : (
+            <>
+              <span className="timeline-devtools-pill">{props.windowDurationLabel ?? formatDuration(visibleDuration)}</span>
+              {props.windowItemCount !== undefined ? (
+                <span className="timeline-devtools-pill">片段 {props.windowItemCount}</span>
+              ) : null}
+            </>
+          )}
         </div>
       </div>
 
       <div className="timeline-waterfall">
         <div className="timeline-axis">
-          <div className="timeline-axis-label">时间</div>
+          <div className="timeline-axis-label">
+            {isLoading ? (
+              <span className="skeleton-block skeleton-inline skeleton-axis-title" />
+            ) : (
+              '时间'
+            )}
+          </div>
           <div
             ref={axisTrackRef}
-            className="timeline-axis-track"
+            className={`timeline-axis-track ${isLoading ? 'timeline-axis-track-skeleton' : ''}`}
             onPointerMove={(event) => {
+              if (isLoading) {
+                return
+              }
               updateHoveredTime(
                 event.clientX,
                 axisTrackRef,
@@ -311,13 +243,17 @@ export function TimelineChart(props: {
               )
             }}
           >
-            {ticks.map((tick) => (
+            {renderedTicks.map((tick, index) => (
               <div
-                key={`${tick.seconds}-${tick.label}`}
-                className="timeline-axis-tick"
+                key={`${tick.seconds}-${tick.label}-${index}`}
+                className={`timeline-axis-tick ${isLoading ? 'timeline-axis-tick-skeleton' : ''}`}
                 style={{ left: `${tick.positionPct}%` }}
               >
-                <span>{tick.label}</span>
+                {isLoading ? (
+                  <span className="skeleton-block skeleton-inline skeleton-timeline-tick" />
+                ) : (
+                  <span>{tick.label}</span>
+                )}
               </div>
             ))}
 
@@ -333,8 +269,11 @@ export function TimelineChart(props: {
         </div>
 
         <div
-          className="timeline-waterfall-body"
+          className={`timeline-waterfall-body ${isLoading ? 'timeline-waterfall-body-skeleton' : ''}`}
           onPointerMove={(event) => {
+            if (isLoading) {
+              return
+            }
             updateHoveredTime(
               event.clientX,
               axisTrackRef,
@@ -347,28 +286,57 @@ export function TimelineChart(props: {
             )
           }}
         >
-          {layout.map((row, rowIndex) => (
-            <div key={row.id} className="timeline-row-block">
+          {renderedLayout.map((row, rowIndex) => (
+            <div key={row.id} className={`timeline-row-block ${isLoading ? 'timeline-row-block-skeleton' : ''}`}>
               <div className="timeline-row-head">
-                <strong>{row.label}</strong>
-                {row.lanes.length > 1 ? <span>{row.lanes.length} 层</span> : null}
+                {isLoading ? (
+                  <>
+                    <span className="skeleton-block skeleton-inline skeleton-timeline-row-label" />
+                    {rowIndex === 0 ? (
+                      <span className="skeleton-block skeleton-inline skeleton-timeline-row-meta" />
+                    ) : null}
+                  </>
+                ) : (
+                  <>
+                    <strong>{row.label}</strong>
+                    {row.lanes.length > 1 ? <span>{row.lanes.length} 层</span> : null}
+                  </>
+                )}
               </div>
 
               <div
                 ref={rowIndex === 0 ? laneTrackRef : undefined}
-                className="timeline-row-lanes"
+                className={`timeline-row-lanes ${isLoading ? 'timeline-row-lanes-skeleton' : ''}`}
               >
                 {row.lanes.map((lane, laneIndex) => (
                   <div key={`${row.id}-lane-${laneIndex}`} className="timeline-lane">
-                    {ticks.map((tick) => (
+                    {renderedTicks.map((tick, tickIndex) => (
                       <span
-                        key={`${row.id}-lane-${laneIndex}-${tick.seconds}`}
+                        key={`${row.id}-lane-${laneIndex}-${tick.seconds}-${tickIndex}`}
                         className="timeline-lane-grid"
                         style={{ left: `${tick.positionPct}%` }}
                       />
                     ))}
 
                     {lane.map((segment) => {
+                      if (isLoading) {
+                        const leftPct =
+                          ((segment.startSec - props.viewStartSec) / Math.max(visibleDuration, 1)) * 100
+                        const widthPct =
+                          ((segment.endSec - segment.startSec) / Math.max(visibleDuration, 1)) * 100
+
+                        return (
+                          <span
+                            key={segment.id}
+                            className="timeline-bar timeline-bar-skeleton skeleton-block"
+                            style={{
+                              left: `${leftPct}%`,
+                              width: `${Math.max(widthPct, 0.7)}%`,
+                            }}
+                          />
+                        )
+                      }
+
                       const clipped = clipSegment(segment, props.viewStartSec, props.viewEndSec)
                       if (!clipped) {
                         return null
@@ -410,7 +378,14 @@ export function TimelineChart(props: {
                   </div>
                 ))}
 
-                {hoveredLaneLeftPx !== null ? (
+                {isLoading && rowIndex === 0 ? (
+                  <span
+                    className="timeline-inspector-line timeline-inspector-line-skeleton"
+                    style={{ left: '52%' }}
+                  />
+                ) : null}
+
+                {!isLoading && hoveredLaneLeftPx !== null ? (
                   <span
                     className="timeline-inspector-line"
                     style={{ left: `${hoveredLaneLeftPx}px` }}
@@ -425,17 +400,28 @@ export function TimelineChart(props: {
       {props.interactiveZoom ? (
         <div className="timeline-overview-panel">
           <div className="timeline-overview-head">
-            <span>全天缩放</span>
-            <span>{formatDuration(visibleDuration)}</span>
+            {isLoading ? (
+              <>
+                <span className="skeleton-block skeleton-inline skeleton-timeline-pill" />
+                <span className="skeleton-block skeleton-inline skeleton-timeline-pill" />
+              </>
+            ) : (
+              <>
+                <span>全天缩放</span>
+                <span>{formatDuration(visibleDuration)}</span>
+              </>
+            )}
           </div>
 
           <div className="timeline-overview-row">
-            <div className="timeline-overview-label">全天</div>
+            <div className="timeline-overview-label">
+              {isLoading ? <span className="skeleton-block skeleton-inline skeleton-axis-title" /> : '全天'}
+            </div>
             <div
               ref={overviewRef}
               className="timeline-overview"
               onPointerDown={(event) => {
-                if (!props.onViewportChange) {
+                if (isLoading || !props.onViewportChange) {
                   return
                 }
 
@@ -477,32 +463,46 @@ export function TimelineChart(props: {
                   left: `${(props.viewStartSec / DAY_SECONDS) * 100}%`,
                   width: `${Math.max((visibleDuration / DAY_SECONDS) * 100, 0.12)}%`,
                 }}
-                onPointerDown={(event) => beginOverviewDrag(event, 'move', props, dragStateRef)}
+                onPointerDown={
+                  isLoading
+                    ? undefined
+                    : (event) => beginOverviewDrag(event, 'move', props, dragStateRef)
+                }
               >
                 <button
                   type="button"
                   className="timeline-overview-handle is-start"
                   aria-label="调整时间窗口开始位置"
+                  disabled={isLoading}
                   onPointerDown={(event) =>
-                    beginOverviewDrag(event, 'resize-start', props, dragStateRef)
+                    isLoading ? undefined : beginOverviewDrag(event, 'resize-start', props, dragStateRef)
                   }
                 >
-                  <span className="timeline-overview-handle-time">
-                    {formatClock(props.viewStartSec)}
-                  </span>
+                  {isLoading ? (
+                    <span className="skeleton-block skeleton-inline skeleton-timeline-handle-time" />
+                  ) : (
+                    <span className="timeline-overview-handle-time">
+                      {formatClock(props.viewStartSec)}
+                    </span>
+                  )}
                 </button>
                 <div className="timeline-overview-window-body" aria-hidden="true" />
                 <button
                   type="button"
                   className="timeline-overview-handle is-end"
                   aria-label="调整时间窗口结束位置"
+                  disabled={isLoading}
                   onPointerDown={(event) =>
-                    beginOverviewDrag(event, 'resize-end', props, dragStateRef)
+                    isLoading ? undefined : beginOverviewDrag(event, 'resize-end', props, dragStateRef)
                   }
                 >
-                  <span className="timeline-overview-handle-time">
-                    {formatClock(props.viewEndSec)}
-                  </span>
+                  {isLoading ? (
+                    <span className="skeleton-block skeleton-inline skeleton-timeline-handle-time" />
+                  ) : (
+                    <span className="timeline-overview-handle-time">
+                      {formatClock(props.viewEndSec)}
+                    </span>
+                  )}
                 </button>
               </div>
             </div>
@@ -521,26 +521,101 @@ export function TimelineChart(props: {
           </div>
 
           <div className="timeline-table-body">
-            {visibleItems.map((item) => (
-              <div
-                key={`${item.id}-row`}
-                className="timeline-table-row"
-              >
-                <span className="timeline-table-name">
-                  <i style={{ backgroundColor: item.color }} />
-                  {item.label}
-                </span>
-                <span>{segmentTypeLabel(item)}</span>
-                <span className="timeline-table-detail">{item.detail}</span>
-                <span>{formatClockRange(item.startSec, item.endSec)}</span>
-                <span>{formatDuration(item.durationSec)}</span>
-              </div>
-            ))}
+            {isLoading
+              ? Array.from({ length: 6 }, (_, index) => (
+                <div key={`timeline-table-skeleton-${index}`} className="timeline-table-row">
+                  <span className="timeline-table-name">
+                    <i className="skeleton-block" />
+                    <span className="skeleton-block skeleton-inline" style={{ width: '72px' }} />
+                  </span>
+                  <span className="skeleton-block skeleton-inline" style={{ width: '42px' }} />
+                  <span className="timeline-table-detail">
+                    <span className="skeleton-block skeleton-inline" style={{ width: '78%' }} />
+                  </span>
+                  <span className="skeleton-block skeleton-inline" style={{ width: '86px' }} />
+                  <span className="skeleton-block skeleton-inline" style={{ width: '54px' }} />
+                </div>
+              ))
+              : visibleItems.map((item) => (
+                <div
+                  key={`${item.id}-row`}
+                  className="timeline-table-row"
+                >
+                  <span className="timeline-table-name">
+                    <i style={{ backgroundColor: item.color }} />
+                    {item.label}
+                  </span>
+                  <span>{segmentTypeLabel(item)}</span>
+                  <span className="timeline-table-detail">{item.detail}</span>
+                  <span>{formatClockRange(item.startSec, item.endSec)}</span>
+                  <span>{formatDuration(item.durationSec)}</span>
+                </div>
+              ))}
           </div>
         </div>
       ) : null}
     </section>
   )
+}
+
+function createTimelineSkeletonLayout(): RowLayout[] {
+  const makeSegment = (id: string, leftPct: number, widthPct: number): ChartSegment => {
+    const startSec = Math.round((leftPct / 100) * DAY_SECONDS)
+    const endSec = Math.round(((leftPct + widthPct) / 100) * DAY_SECONDS)
+
+    return {
+      id,
+      key: id,
+      label: '加载中',
+      detail: '加载中',
+      tone: 'focus',
+      startSec,
+      endSec,
+      durationSec: Math.max(endSec - startSec, 60),
+      color: '#cfd8e6',
+    }
+  }
+
+  return [
+    {
+      id: 'skeleton-focus',
+      label: '加载中',
+      lanes: [
+        [
+          makeSegment('skeleton-focus-1', 4, 18),
+          makeSegment('skeleton-focus-2', 31, 26),
+          makeSegment('skeleton-focus-3', 74, 12),
+        ],
+        [
+          makeSegment('skeleton-focus-4', 12, 20),
+          makeSegment('skeleton-focus-5', 42, 15),
+        ],
+      ],
+      includeInOverview: true,
+      includeInTable: true,
+    },
+    {
+      id: 'skeleton-presence',
+      label: '加载中',
+      lanes: [[
+        makeSegment('skeleton-presence-1', 8, 24),
+        makeSegment('skeleton-presence-2', 36, 18),
+        makeSegment('skeleton-presence-3', 61, 21),
+      ]],
+      includeInOverview: true,
+      includeInTable: true,
+    },
+  ]
+}
+
+function createSkeletonTicks(viewStartSec: number, viewEndSec: number) {
+  const duration = Math.max(viewEndSec - viewStartSec, 1)
+
+  return [0, 20, 40, 60, 80, 100].map((positionPct, index) => ({
+    seconds: Math.round(viewStartSec + (duration * positionPct) / 100),
+    label: `skeleton-${index}`,
+    positionPct,
+  }))
 }
 
 function buildRows(rows: TimelineRow[]): RowLayout[] {
