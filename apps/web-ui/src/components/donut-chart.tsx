@@ -25,7 +25,6 @@ const ReactEChartsCore = (
 ) as React.ComponentType<Record<string, unknown>>
 
 const LABEL_COLOR = '#1d2c43'
-const MUTED_COLOR = '#6f839f'
 const MONO_FAMILY = '"JetBrains Mono", "Cascadia Mono", "Consolas", "SFMono-Regular", monospace'
 const PIE_CENTER_X = '50%'
 
@@ -126,30 +125,7 @@ export function DonutChart(props: {
           }),
         },
       ],
-      graphic: [
-        {
-          type: 'text',
-          left: PIE_CENTER_X,
-          top: '41%',
-          style: {
-            text: isLoading ? '' : props.totalLabel,
-            fill: LABEL_COLOR,
-            font: `700 20px ${MONO_FAMILY}`,
-            textAlign: 'center',
-          },
-        },
-        {
-          type: 'text',
-          left: PIE_CENTER_X,
-          top: '52%',
-          style: {
-            text: isLoading ? '' : '总计时长',
-            fill: MUTED_COLOR,
-            font: `12px ${MONO_FAMILY}`,
-            textAlign: 'center',
-          },
-        },
-      ],
+      graphic: [],
     }
   }, [
     chartSlices,
@@ -157,7 +133,6 @@ export function DonutChart(props: {
     props.filter,
     props.filterKind,
     props.title,
-    props.totalLabel,
   ])
 
   if (!isLoading && displaySlices.length === 0) {
@@ -191,11 +166,26 @@ export function DonutChart(props: {
           style={{ height: 288, width: '100%', paddingInline: 14 }}
         />
 
+        <div className="donut-center-copy donut-center-copy-main" aria-hidden={isLoading ? 'true' : undefined}>
+          <div className="donut-center-line donut-center-line-primary">
+            {isLoading ? (
+              <span className="skeleton-block skeleton-inline donut-total-skeleton donut-total-skeleton-main" />
+            ) : (
+              props.totalLabel
+            )}
+          </div>
+          <div className="donut-center-line donut-center-line-secondary">
+            {isLoading ? (
+              <span className="skeleton-block skeleton-inline donut-caption-skeleton donut-caption-skeleton-main" />
+            ) : (
+              '总计时长'
+            )}
+          </div>
+        </div>
+
         {isLoading ? (
           <div className="skeleton-overlay donut-visual-overlay" aria-hidden="true">
             <span className="skeleton-block donut-ring-skeleton" />
-            <span className="skeleton-block skeleton-inline donut-total-skeleton donut-total-skeleton-main" />
-            <span className="skeleton-block skeleton-inline donut-caption-skeleton donut-caption-skeleton-main" />
           </div>
         ) : null}
       </div>
@@ -344,58 +334,13 @@ export function CompactDonutChart(props: {
           }),
         },
       ],
-      graphic: [
-        {
-          type: 'text',
-          silent: true,
-          left: 'center',
-          top: props.footerLabel ? '38%' : '41%',
-          style: {
-            text: isLoading ? '' : props.totalLabel,
-            fill: LABEL_COLOR,
-            font: `700 20px ${MONO_FAMILY}`,
-            textAlign: 'center',
-          },
-        },
-        {
-          type: 'text',
-          silent: true,
-          left: 'center',
-          top: props.footerLabel ? '49%' : '53%',
-          style: {
-            text: isLoading ? '' : props.secondaryLabel,
-            fill: emphasizedSlice?.color ?? MUTED_COLOR,
-            font: `600 12px ${MONO_FAMILY}`,
-            textAlign: 'center',
-          },
-        },
-        ...(props.footerLabel
-          ? [
-            {
-              type: 'text' as const,
-              silent: true,
-              left: 'center',
-              top: '61%',
-              style: {
-                text: isLoading ? '' : props.footerLabel,
-                fill: MUTED_COLOR,
-                font: `11px ${MONO_FAMILY}`,
-                textAlign: 'center',
-              },
-            },
-          ]
-          : []),
-      ],
+      graphic: [],
     }
   }, [
     chartSlices,
-    props.footerLabel,
-    emphasizedSlice,
     isLoading,
     props.onSelectKey,
-    props.secondaryLabel,
     props.selectedKey,
-    props.totalLabel,
   ])
 
   if (!isLoading && displaySlices.length === 0) {
@@ -434,12 +379,43 @@ export function CompactDonutChart(props: {
         style={{ height: props.height ?? 220, width: '100%' }}
       />
 
+      <div
+        className={`donut-center-copy donut-center-copy-compact ${props.footerLabel ? 'has-footer' : ''}`}
+        aria-hidden={isLoading ? 'true' : undefined}
+      >
+        <div className="donut-center-line donut-center-line-primary">
+          {isLoading ? (
+            <span className="skeleton-block skeleton-inline donut-total-skeleton donut-total-skeleton-compact" />
+          ) : (
+            props.totalLabel
+          )}
+        </div>
+
+        <div
+          className="donut-center-line donut-center-line-secondary"
+          style={!isLoading && emphasizedSlice?.color ? { color: emphasizedSlice.color } : undefined}
+        >
+          {isLoading ? (
+            <span className="skeleton-block skeleton-inline donut-caption-skeleton donut-caption-skeleton-compact" />
+          ) : (
+            props.secondaryLabel
+          )}
+        </div>
+
+        {props.footerLabel ? (
+          <div className="donut-center-line donut-center-line-footer">
+            {isLoading ? (
+              <span className="skeleton-block skeleton-inline donut-footer-skeleton" />
+            ) : (
+              props.footerLabel
+            )}
+          </div>
+        ) : null}
+      </div>
+
       {isLoading ? (
         <div className="skeleton-overlay compact-donut-overlay" aria-hidden="true">
           <span className="skeleton-block donut-ring-skeleton donut-ring-skeleton-compact" />
-          <span className="skeleton-block skeleton-inline donut-total-skeleton donut-total-skeleton-compact" />
-          <span className="skeleton-block skeleton-inline donut-caption-skeleton donut-caption-skeleton-compact" />
-          <span className="skeleton-block skeleton-inline donut-footer-skeleton" />
         </div>
       ) : null}
     </div>

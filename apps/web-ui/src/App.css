@@ -2349,6 +2349,81 @@
   position: relative;
 }
 
+.donut-center-copy {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.donut-center-line {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.donut-center-line-primary {
+  color: #1d2c43;
+  font-family: var(--mono-family);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.donut-center-line-secondary {
+  color: #6f839f;
+  font-family: var(--mono-family);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.donut-center-line-footer {
+  color: #6f839f;
+  font-family: var(--mono-family);
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.donut-center-copy-main .donut-center-line-primary {
+  top: 41%;
+}
+
+.donut-center-copy-main .donut-center-line-secondary {
+  top: 52%;
+}
+
+.donut-center-copy-compact .donut-center-line-primary {
+  top: 41%;
+}
+
+.donut-center-copy-compact .donut-center-line-secondary {
+  top: 53%;
+}
+
+.donut-center-copy-compact.has-footer .donut-center-line-primary {
+  top: 38%;
+}
+
+.donut-center-copy-compact.has-footer .donut-center-line-secondary {
+  top: 49%;
+}
+
+.donut-center-copy-compact.has-footer .donut-center-line-footer {
+  top: 61%;
+}
+
+.donut-center-copy .donut-total-skeleton,
+.donut-center-copy .donut-caption-skeleton,
+.donut-center-copy .donut-footer-skeleton {
+  position: static;
+  left: auto;
+  top: auto;
+  transform: none;
+  margin-inline: auto;
+}
+
 .skeleton-overlay {
   position: absolute;
   inset: 0;

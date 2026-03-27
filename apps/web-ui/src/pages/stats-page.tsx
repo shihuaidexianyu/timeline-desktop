@@ -156,29 +156,37 @@ function WeeklyRhythmCard(props: {
 
             <div className="weekly-summary-row">
                 <div className={props.loading ? 'weekly-summary-skeleton' : undefined}>
-                    {props.loading ? (
-                        <span className="skeleton-block skeleton-inline skeleton-stat-value" />
-                    ) : (
-                        <strong>{formatDuration(weekActiveTotal)}</strong>
-                    )}
-                    {props.loading ? (
-                        <span className="skeleton-block skeleton-inline skeleton-stat-caption" />
-                    ) : (
-                        <small>本周活跃 · 当月 {formatDuration(monthActiveTotal)}</small>
-                    )}
+                    <strong>
+                        {props.loading ? (
+                            <span className="skeleton-block skeleton-inline skeleton-stat-value" />
+                        ) : (
+                            formatDuration(weekActiveTotal)
+                        )}
+                    </strong>
+                    <small>
+                        {props.loading ? (
+                            <span className="skeleton-block skeleton-inline skeleton-stat-caption" />
+                        ) : (
+                            `本周活跃 · 当月 ${formatDuration(monthActiveTotal)}`
+                        )}
+                    </small>
                 </div>
 
                 <div className={props.loading ? 'weekly-summary-skeleton' : undefined}>
-                    {props.loading ? (
-                        <span className="skeleton-block skeleton-inline skeleton-stat-value" />
-                    ) : (
-                        <strong>{formatDuration(weekFocusTotal)}</strong>
-                    )}
-                    {props.loading ? (
-                        <span className="skeleton-block skeleton-inline skeleton-stat-caption" />
-                    ) : (
-                        <small>本周应用 · 当月 {formatDuration(monthFocusTotal)}</small>
-                    )}
+                    <strong>
+                        {props.loading ? (
+                            <span className="skeleton-block skeleton-inline skeleton-stat-value" />
+                        ) : (
+                            formatDuration(weekFocusTotal)
+                        )}
+                    </strong>
+                    <small>
+                        {props.loading ? (
+                            <span className="skeleton-block skeleton-inline skeleton-stat-caption" />
+                        ) : (
+                            `本周应用 · 当月 ${formatDuration(monthFocusTotal)}`
+                        )}
+                    </small>
                 </div>
             </div>
 

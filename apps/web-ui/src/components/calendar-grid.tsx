@@ -96,9 +96,8 @@ export function CalendarGrid(props: {
             <button
               key={cell.key}
               type="button"
-              className={`calendar-cell calendar-cell-compact ${cell.heatClass} ${
-                isSelected ? 'is-selected' : ''
-              } ${isToday ? 'is-today' : ''}`}
+              className={`calendar-cell calendar-cell-compact ${cell.heatClass} ${isSelected ? 'is-selected' : ''
+                } ${isToday ? 'is-today' : ''}`}
               aria-label={isLoading ? '加载中' : cell.tooltip}
               title={isLoading ? '加载中' : cell.tooltip}
               disabled={isLoading}
