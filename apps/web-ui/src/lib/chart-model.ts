@@ -10,32 +10,32 @@ import type {
 const DAY_SECONDS = 24 * 60 * 60
 const MERGE_GAP_SECONDS = 60
 const APP_PRESET_COLORS: string[] = [
-  '#4f46e5',
-  '#0f766e',
-  '#b45309',
-  '#7c3aed',
-  '#0f7490',
-  '#c2410c',
-  '#be123c',
+  '#2f6fed',
+  '#14b8a6',
+  '#3b82f6',
+  '#06b6d4',
+  '#f59e0b',
+  '#d64545',
   '#65a30d',
-  '#1d4ed8',
-  '#15803d',
-  '#9333ea',
-  '#a16207',
+  '#6366f1',
+  '#10b981',
+  '#22c55e',
+  '#0ea5e9',
+  '#f97316',
 ]
 const DOMAIN_PRESET_COLORS: string[] = [
-  '#4338ca',
-  '#0f766e',
-  '#c2410c',
-  '#6d28d9',
-  '#a21caf',
-  '#0369a1',
-  '#be185d',
-  '#4d7c0f',
-  '#b45309',
-  '#1d4ed8',
-  '#15803d',
-  '#4f46e5',
+  '#1f5bd8',
+  '#14b8a6',
+  '#0ea5e9',
+  '#2f6fed',
+  '#10b981',
+  '#f59e0b',
+  '#d64545',
+  '#65a30d',
+  '#06b6d4',
+  '#0f9f8f',
+  '#f97316',
+  '#6366f1',
 ]
 
 export type TooltipDatum = {
@@ -416,7 +416,7 @@ function buildDonutSlices(segments: ChartSegment[], topN: number) {
       label: '其他',
       value: otherValue,
       percentage: total === 0 ? 0 : (otherValue / total) * 100,
-      color: '#98a2b3',
+      color: '#94a3b8',
     })
   }
 
@@ -549,7 +549,7 @@ function assignDistinctColors(
 
   return segments.map((segment) => ({
     ...segment,
-    color: colorByKey.get(segment.key) ?? '#4f7cff',
+    color: colorByKey.get(segment.key) ?? '#2f6fed',
   }))
 }
 
@@ -568,10 +568,10 @@ function buildDistinctPalette(count: number, namespace: 'app' | 'domain') {
 }
 
 function generatedDistinctColor(index: number, namespace: 'app' | 'domain') {
-  const hueOffset = namespace === 'app' ? 18 : 42
+  const hueOffset = namespace === 'app' ? 214 : 190
   const hue = Math.round((hueOffset + index * 137.508) % 360)
-  const saturation = 72 - (index % 3) * 6
-  const lightness = 46 + ((index + (namespace === 'app' ? 0 : 1)) % 2) * 8
+  const saturation = 64 - (index % 3) * 5
+  const lightness = 50 + ((index + (namespace === 'app' ? 0 : 1)) % 2) * 6
   return `hsl(${hue} ${saturation}% ${lightness}%)`
 }
 
@@ -587,12 +587,12 @@ function presenceLabel(state: PresenceSegment['state']) {
 
 function presenceColor(state: PresenceSegment['state']) {
   if (state === 'active') {
-    return '#4f46e5'
+    return '#2f6fed'
   }
   if (state === 'idle') {
-    return '#0f766e'
+    return '#14b8a6'
   }
-  return '#64748b'
+  return '#8da0b6'
 }
 
 export function todayString() {

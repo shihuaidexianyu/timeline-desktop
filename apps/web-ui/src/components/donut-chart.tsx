@@ -47,7 +47,11 @@ export function DonutChart(props: {
 
   const option = useMemo<EChartsOption>(() => {
     return {
-      animation: false,
+      animation: true,
+      animationDuration: 180,
+      animationDurationUpdate: 180,
+      animationEasing: 'cubicOut',
+      animationEasingUpdate: 'cubicOut',
       tooltip: {
         trigger: 'item',
         appendToBody: true,
@@ -293,10 +297,11 @@ export function CompactDonutChart(props: {
           },
           emphasis: {
             scale: true,
-            scaleSize: 7,
+            scaleSize: 12,
             itemStyle: {
-              shadowBlur: 12,
-              shadowColor: 'rgba(28, 50, 86, 0.2)',
+              shadowBlur: 18,
+              shadowOffsetY: 4,
+              shadowColor: 'rgba(30, 53, 91, 0.22)',
             },
           },
           data: displaySlices.map((slice) => {
