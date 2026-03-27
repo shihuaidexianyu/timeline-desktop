@@ -202,15 +202,13 @@ function WeeklyRhythmCard(props: {
                                 <div key={`weekly-skeleton-${index}`} className="weekly-bar-column weekly-bar-column-skeleton">
                                     <div className="weekly-bar-track weekly-bar-track-skeleton">
                                         <span
-                                            className={`weekly-bar weekly-bar-active skeleton-block ${bar.extra === '0%' ? 'is-cap' : ''}`}
-                                            style={{ height: bar.active }}
+                                            className="weekly-bar weekly-bar-focus-base skeleton-block is-cap"
+                                            style={{ height: `calc(${bar.active} + ${bar.extra})` }}
                                         />
                                         <span
-                                            className={`weekly-bar weekly-bar-focus-extra skeleton-block ${bar.extra !== '0%' ? 'is-cap' : ''}`}
+                                            className="weekly-bar weekly-bar-active skeleton-block is-cap"
                                             style={{
-                                                height: bar.extra,
-                                                bottom: `calc(${bar.active} - 2px)`,
-                                                opacity: bar.extra === '0%' ? 0 : 1,
+                                                height: bar.active,
                                             }}
                                         />
                                     </div>
@@ -396,6 +394,7 @@ function WeeklyBarChart(props: {
     bars: WeekBarDatum[]
     onSelectDate: (date: string) => void
 }) {
+    const minVisualBarPercent = 1.2
     const maxValue = Math.max(
         ...props.bars.map((bar) => Math.max(bar.activeSeconds, bar.focusSeconds)),
         1,
@@ -417,16 +416,14 @@ function WeeklyBarChart(props: {
                 <div className="weekly-bars">
                     {props.bars.map((bar) => {
                         const normalizedFocusSeconds = Math.max(bar.focusSeconds, bar.activeSeconds)
-                        const focusExtraSeconds = Math.max(0, normalizedFocusSeconds - bar.activeSeconds)
-                        const hasFocusExtra = focusExtraSeconds > 0
-                        const activeBarHeight = `${Math.max(
-                            (bar.activeSeconds / axisMaxValue) * 100,
-                            bar.activeSeconds > 0 ? 10 : 0,
-                        )}%`
-                        const focusExtraBarHeight = `${Math.max(
-                            (focusExtraSeconds / axisMaxValue) * 100,
-                            focusExtraSeconds > 0 ? 10 : 0,
-                        )}%`
+                        const activeBarHeightPercent = bar.activeSeconds > 0
+                            ? Math.max((bar.activeSeconds / axisMaxValue) * 100, minVisualBarPercent)
+                            : 0
+                        const focusBarHeightPercent = normalizedFocusSeconds > 0
+                            ? Math.max((normalizedFocusSeconds / axisMaxValue) * 100, minVisualBarPercent)
+                            : 0
+                        const activeBarHeight = `${activeBarHeightPercent}%`
+                        const focusBarHeight = `${focusBarHeightPercent}%`
 
                         return (
                             <button
@@ -434,19 +431,20 @@ function WeeklyBarChart(props: {
                                 type="button"
                                 className={`weekly-bar-column ${bar.isSelected ? 'is-selected' : ''}`}
                                 onClick={() => props.onSelectDate(bar.date)}
+                                aria-pressed={bar.isSelected}
+                                aria-label={`${bar.date}，活跃 ${formatDuration(bar.activeSeconds)}，应用 ${formatDuration(normalizedFocusSeconds)}`}
                                 title={`${bar.date} 活跃 ${formatDuration(bar.activeSeconds)} · 应用 ${formatDuration(normalizedFocusSeconds)}`}
                             >
                                 <div className="weekly-bar-track">
                                     <div
-                                        className={`weekly-bar weekly-bar-active ${hasFocusExtra ? '' : 'is-cap'}`}
-                                        style={{ height: activeBarHeight }}
+                                        className="weekly-bar weekly-bar-focus-base is-cap"
+                                        style={{ height: focusBarHeight }}
                                     />
                                     <div
-                                        className={`weekly-bar weekly-bar-focus-extra ${hasFocusExtra ? 'is-cap' : ''}`}
+                                        className="weekly-bar weekly-bar-active is-cap"
                                         style={{
-                                            height: focusExtraBarHeight,
-                                            bottom: `calc(${activeBarHeight} - 2px)`,
-                                            opacity: focusExtraSeconds > 0 ? 1 : 0,
+                                            height: activeBarHeight,
+                                            bottom: 0,
                                         }}
                                     />
                                 </div>

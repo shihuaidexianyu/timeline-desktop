@@ -610,6 +610,13 @@
   font-weight: 700;
 }
 
+.weekly-bar-column.is-selected .weekly-bar-track {
+  background: #d7e3f3;
+  box-shadow:
+    0 0 0 1px rgba(47, 111, 237, 0.16),
+    0 10px 22px rgba(47, 111, 237, 0.12);
+}
+
 .weekly-bar-track {
   position: relative;
   width: 100%;
@@ -631,37 +638,29 @@
   bottom: 0;
   border-radius: 0;
   background: linear-gradient(180deg, var(--chart-focus-top), var(--chart-focus));
-  transition: filter 0.16s ease;
+  transition:
+    filter 0.16s ease,
+    height 0.2s ease,
+    bottom 0.2s ease,
+    opacity 0.16s ease;
 }
 
 .weekly-bar-active {
   background: linear-gradient(180deg, var(--chart-active-top), var(--chart-active));
-  z-index: 1;
+  z-index: 2;
 }
 
-.weekly-bar-focus-extra {
+.weekly-bar-focus-base {
   position: absolute;
   left: 0;
   right: 0;
   background: linear-gradient(180deg, var(--chart-focus-top), var(--chart-focus));
-  border-top: 1px solid rgba(255, 255, 255, 0.16);
-  opacity: 0.88;
-  z-index: 2;
-}
-
-.weekly-bar-focus-extra::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -1px;
-  height: 8px;
-  background: linear-gradient(180deg, rgba(122, 124, 232, 0), rgba(47, 191, 155, 0.26));
-  pointer-events: none;
+  opacity: 1;
+  z-index: 1;
 }
 
 .weekly-bar-active.is-cap,
-.weekly-bar-focus-extra.is-cap {
+.weekly-bar-focus-base.is-cap {
   border-radius: 10px 10px 0 0;
 }
 
@@ -678,6 +677,7 @@
 
 .weekly-axis-label {
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .mini-list-card {
@@ -2781,10 +2781,6 @@
 
 .weekly-grid-line-skeleton {
   border-top-style: solid;
-}
-
-.weekly-chart-shell-skeleton .weekly-bar-focus-extra::after {
-  display: none;
 }
 
 .weekly-bars-skeleton {
