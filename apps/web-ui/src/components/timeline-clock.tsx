@@ -4,13 +4,14 @@ import type { ChartSegment } from '../lib/chart-model'
 import { formatDuration } from '../lib/chart-model'
 
 const DAY_SECONDS = 24 * 60 * 60
-const SNAP_SECONDS = 15 * 60
 const CLOCK_SIZE = 292
 const CLOCK_CENTER = CLOCK_SIZE / 2
 const OUTER_RING_RADIUS = 116
 const INNER_RING_RADIUS = 100
 const WINDOW_RING_RADIUS = 84
-const CONTROL_RING_RADIUS = 106
+const CONTROL_RING_RADIUS = 136
+const MOVE_CONTROL_RING_RADIUS = 152
+const HANDLE_PRIORITY_RADIUS = 26
 
 type DragMode = 'resize' | 'move' | null
 
@@ -43,9 +44,21 @@ export function TimelineClock(props: {
     )
 
     const windowDuration = Math.max(0, props.viewEndSec - props.viewStartSec)
-    const windowCenterSec = (props.viewStartSec + props.viewEndSec) / 2
-    const resizeHandlePoint = pointAtSec(windowCenterSec, CONTROL_RING_RADIUS)
-    const moveHandlePoint = pointAtSec((windowCenterSec + DAY_SECONDS / 2) % DAY_SECONDS, CONTROL_RING_RADIUS)
+    
+    // Calculate window center for move handle position
+    const windowCenterSecRaw = props.viewStartSec + windowDuration / 2
+    
+    const windowStartPoint = pointAtSec(props.viewStartSec, CONTROL_RING_RADIUS)
+    const windowEndPoint = pointAtSec(props.viewEndSec, CONTROL_RING_RADIUS)
+    // Use raw center + offset for move handle
+    const moveHandlePoint = pointAtSec(windowCenterSecRaw + DAY_SECONDS / 2, MOVE_CONTROL_RING_RADIUS)
+
+    // Detect boundary limit states
+    const isAtMinDuration = windowDuration <= minViewSec + 60 // 1min tolerance
+    const isAtMaxDuration = windowDuration >= maxViewSec - 60
+    const isAtStartBoundary = props.viewStartSec <= 300 // 5min from 0:00
+    const isAtEndBoundary = props.viewEndSec >= DAY_SECONDS - 300 // 5min to 24:00
+    const isAtLimits = isAtMinDuration || isAtMaxDuration || isAtStartBoundary || isAtEndBoundary
 
     useEffect(() => {
         if (loading) {
@@ -61,11 +74,20 @@ export function TimelineClock(props: {
 
             const rawSec = secFromPointer(event.clientX, event.clientY, svg)
             const continuousSec = toContinuousSec(rawSec, dragLastRawSecRef, dragWrapOffsetRef)
-            const nextSec = snapToStep(continuousSec)
+            const nextSec = continuousSec
             if (mode === 'move') {
-                const centerSec = normalizeSec(nextSec + moveCenterOffsetRef.current)
                 const half = windowDuration / 2
-                const nextStart = clamp(centerSec - half, 0, DAY_SECONDS - windowDuration)
+                
+                // Calculate next center position
+                const nextCenter = nextSec + moveCenterOffsetRef.current
+                
+                // Position window around center
+                let nextStart = nextCenter - half
+                
+                // Strictly clamp to [0, DAY_SECONDS - windowDuration]
+                // No wraparound allowed - prevent crossing midnight
+                nextStart = clamp(nextStart, 0, DAY_SECONDS - windowDuration)
+                
                 onWindowChange(nextStart, nextStart + windowDuration)
                 return
             }
@@ -79,7 +101,7 @@ export function TimelineClock(props: {
                     2 * Math.min(resizeCenterSec, DAY_SECONDS - resizeCenterSec),
                 ),
             )
-            const duration = clamp(snapToStep(halfDuration * 2), minViewSec, maxSymmetricDuration)
+            const duration = clamp(halfDuration * 2, minViewSec, maxSymmetricDuration)
             const nextStart = resizeCenterSec - duration / 2
             onWindowChange(nextStart, nextStart + duration)
         }
@@ -128,7 +150,7 @@ export function TimelineClock(props: {
         )
     }
 
-    function beginResizeDrag(event: ReactPointerEvent<SVGCircleElement>) {
+    function beginResizeDrag(event: ReactPointerEvent<SVGElement>) {
         event.preventDefault()
         event.stopPropagation()
         const svg = svgRef.current
@@ -149,6 +171,14 @@ export function TimelineClock(props: {
         event.stopPropagation()
         const svg = svgRef.current
         if (!svg) {
+            return
+        }
+
+        const pointerPoint = pointFromPointer(event.clientX, event.clientY, svg)
+        const nearStartHandle = distanceBetween(pointerPoint, windowStartPoint) <= HANDLE_PRIORITY_RADIUS
+        const nearEndHandle = distanceBetween(pointerPoint, windowEndPoint) <= HANDLE_PRIORITY_RADIUS
+        if (nearStartHandle || nearEndHandle) {
+            beginResizeDrag(event)
             return
         }
 
@@ -174,7 +204,7 @@ export function TimelineClock(props: {
                     <circle
                         cx={CLOCK_CENTER}
                         cy={CLOCK_CENTER}
-                        r={106}
+                        r={CONTROL_RING_RADIUS}
                         className="timeline-clock-move-hit-ring"
                         onPointerDown={beginMoveDrag}
                     />
@@ -216,24 +246,32 @@ export function TimelineClock(props: {
                             strokeWidth={arc.strokeWidth}
                             className="timeline-clock-arc presence"
                         />
-                    ))}
+                    ))})
 
                     <path
-                        d={arcPath(props.viewStartSec, props.viewEndSec, WINDOW_RING_RADIUS)}
-                        className="timeline-clock-window-arc"
+                        d={windowSectorPath(props.viewStartSec, props.viewEndSec, 0, 124)}
+                        className="timeline-clock-window-sector"
                     />
 
                     <path
                         d={arcPath(props.viewStartSec, props.viewEndSec, WINDOW_RING_RADIUS)}
                         className="timeline-clock-window-hit-arc"
+                        onPointerDown={beginMoveDrag}
                     />
 
                     <line
-                        x1={resizeHandlePoint.x}
-                        y1={resizeHandlePoint.y}
-                        x2={moveHandlePoint.x}
-                        y2={moveHandlePoint.y}
-                        className="timeline-clock-diameter"
+                        x1={CLOCK_CENTER}
+                        y1={CLOCK_CENTER}
+                        x2={windowStartPoint.x}
+                        y2={windowStartPoint.y}
+                        className="timeline-clock-window-pointer is-start"
+                    />
+                    <line
+                        x1={CLOCK_CENTER}
+                        y1={CLOCK_CENTER}
+                        x2={windowEndPoint.x}
+                        y2={windowEndPoint.y}
+                        className="timeline-clock-window-pointer is-end"
                     />
 
                     <circle
@@ -244,30 +282,51 @@ export function TimelineClock(props: {
                     />
 
                     <circle
-                        cx={resizeHandlePoint.x}
-                        cy={resizeHandlePoint.y}
+                        cx={windowStartPoint.x}
+                        cy={windowStartPoint.y}
                         r={8}
-                        className="timeline-clock-handle is-resize"
+                        className={`timeline-clock-handle is-window-endpoint ${isAtLimits ? 'is-at-limit' : ''}`}
                         onPointerDown={beginResizeDrag}
                     />
                     <circle
-                        cx={resizeHandlePoint.x}
-                        cy={resizeHandlePoint.y}
-                        r={24}
-                        className="timeline-clock-handle-hit is-resize-hit"
+                        cx={windowStartPoint.x}
+                        cy={windowStartPoint.y}
+                        r={30}
+                        className="timeline-clock-handle-hit is-window-endpoint-hit"
                         onPointerDown={beginResizeDrag}
                     />
                     <circle
-                        cx={moveHandlePoint.x}
-                        cy={moveHandlePoint.y}
+                        cx={windowEndPoint.x}
+                        cy={windowEndPoint.y}
                         r={8}
+                        className={`timeline-clock-handle is-window-endpoint ${isAtLimits ? 'is-at-limit' : ''}`}
+                        onPointerDown={beginResizeDrag}
+                    />
+                    <circle
+                        cx={windowEndPoint.x}
+                        cy={windowEndPoint.y}
+                        r={30}
+                        className="timeline-clock-handle-hit is-window-endpoint-hit"
+                        onPointerDown={beginResizeDrag}
+                    />
+
+                    <line
+                        x1={CLOCK_CENTER}
+                        y1={CLOCK_CENTER}
+                        x2={moveHandlePoint.x}
+                        y2={moveHandlePoint.y}
+                        className="timeline-clock-bisector"
+                    />
+
+                    <polygon
+                        points={`${moveHandlePoint.x},${moveHandlePoint.y - 10} ${moveHandlePoint.x + 10},${moveHandlePoint.y} ${moveHandlePoint.x},${moveHandlePoint.y + 10} ${moveHandlePoint.x - 10},${moveHandlePoint.y}`}
                         className="timeline-clock-handle is-move"
                         onPointerDown={beginMoveDrag}
                     />
                     <circle
                         cx={moveHandlePoint.x}
                         cy={moveHandlePoint.y}
-                        r={24}
+                        r={30}
                         className="timeline-clock-handle-hit is-move-hit"
                         onPointerDown={beginMoveDrag}
                     />
@@ -293,7 +352,7 @@ export function TimelineClock(props: {
                     <small>{formatDuration(windowDuration)}</small>
                 </div>
                 <p className="timeline-clock-instruction">
-                    操作说明：上端拖动调窗口大小；对端拖动调窗口位置。
+                    操作说明：双指针端点柄用于缩放；角平分线对端柄用于平移；红色表示到达限位。
                 </p>
             </div>
         </div>
@@ -347,16 +406,22 @@ function buildHourLabels() {
 }
 
 function arcPath(startSec: number, endSec: number, radius: number) {
-    const safeStart = clamp(startSec, 0, DAY_SECONDS)
-    const safeEnd = clamp(endSec, 0, DAY_SECONDS)
-    const duration = Math.max(0, safeEnd - safeStart)
+    const normalStart = normalizeSec(startSec)
+    const normalEnd = normalizeSec(endSec)
+    
+    let duration: number
+    if (normalEnd >= normalStart) {
+        duration = normalEnd - normalStart
+    } else {
+        duration = (DAY_SECONDS - normalStart) + normalEnd
+    }
 
     if (duration <= 0) {
         return ''
     }
 
-    const start = pointAtSec(safeStart, radius)
-    const end = pointAtSec(safeEnd, radius)
+    const start = pointAtSec(normalStart, radius)
+    const end = pointAtSec(normalEnd, radius)
     const largeArc = duration > DAY_SECONDS / 2 ? 1 : 0
 
     return `M ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArc} 1 ${end.x} ${end.y}`
@@ -371,7 +436,7 @@ function pointAtSec(seconds: number, radius: number) {
 }
 
 function secToAngle(seconds: number) {
-    const ratio = clamp(seconds, 0, DAY_SECONDS) / DAY_SECONDS
+    const ratio = normalizeSec(seconds) / DAY_SECONDS
     return ratio * Math.PI * 2 - Math.PI / 2
 }
 
@@ -389,10 +454,6 @@ function formatClock(seconds: number) {
     const hours = Math.floor(clamped / 3600)
     const minutes = Math.floor((clamped % 3600) / 60)
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
-}
-
-function snapToStep(seconds: number) {
-    return Math.round(seconds / SNAP_SECONDS) * SNAP_SECONDS
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -427,4 +488,42 @@ function nearestEquivalentSec(baseSec: number, aroundSec: number) {
         }
     }
     return best
+}
+
+function pointFromPointer(clientX: number, clientY: number, svg: SVGSVGElement) {
+    const rect = svg.getBoundingClientRect()
+    const x = (clientX - rect.left) * (CLOCK_SIZE / rect.width)
+    const y = (clientY - rect.top) * (CLOCK_SIZE / rect.height)
+    return { x, y }
+}
+
+function distanceBetween(a: { x: number; y: number }, b: { x: number; y: number }) {
+    const dx = a.x - b.x
+    const dy = a.y - b.y
+    return Math.hypot(dx, dy)
+}
+
+function windowSectorPath(startSec: number, endSec: number, innerRadius: number, outerRadius: number) {
+    const normalStart = normalizeSec(startSec)
+    const normalEnd = normalizeSec(endSec)
+    
+    let duration: number
+    if (normalEnd >= normalStart) {
+        duration = normalEnd - normalStart
+    } else {
+        duration = (DAY_SECONDS - normalStart) + normalEnd
+    }
+
+    if (duration <= 0) {
+        return ''
+    }
+
+    const startInner = pointAtSec(normalStart, innerRadius)
+    const startOuter = pointAtSec(normalStart, outerRadius)
+    const endInner = pointAtSec(normalEnd, innerRadius)
+    const endOuter = pointAtSec(normalEnd, outerRadius)
+    const largeArc = duration > DAY_SECONDS / 2 ? 1 : 0
+
+    // Sector path: outer arc, line to inner end, inner arc back, close
+    return `M ${startOuter.x} ${startOuter.y} A ${outerRadius} ${outerRadius} 0 ${largeArc} 1 ${endOuter.x} ${endOuter.y} L ${endInner.x} ${endInner.y} A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${startInner.x} ${startInner.y} Z`
 }

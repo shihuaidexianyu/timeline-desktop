@@ -1331,8 +1331,9 @@
 }
 
 .timeline-clock-card {
+  margin-top: 8px;
   margin-bottom: 12px;
-  padding: 10px 12px;
+  padding: 32px 12px 12px 12px;
   border: 1px solid rgba(145, 159, 180, 0.18);
   border-radius: 14px;
   background: rgba(250, 252, 255, 0.92);
@@ -1341,7 +1342,8 @@
 .timeline-clock-shell {
   position: relative;
   width: min(100%, 320px);
-  margin: 0 auto;
+  margin: 0 auto 0 auto;
+  padding-top: 16px;
 }
 
 .timeline-clock-svg {
@@ -1351,6 +1353,7 @@
   cursor: default;
   touch-action: none;
   user-select: none;
+  overflow: visible;
 }
 
 .timeline-clock-base {
@@ -1401,15 +1404,35 @@
   stroke-linecap: round;
 }
 
+.timeline-clock-window-sector {
+  fill: rgba(76, 175, 80, 0.18);
+  stroke: none;
+  pointer-events: none;
+}
+
 .timeline-clock-window-hit-arc {
   fill: none;
   stroke: transparent;
   stroke-width: 28;
   stroke-linecap: round;
+  cursor: grab;
+}
+
+.timeline-clock-window-pointer {
+  stroke: rgba(33, 77, 152, 0.34);
+  stroke-width: 1.35;
+  stroke-linecap: round;
   pointer-events: none;
 }
 
-.timeline-clock-diameter {
+.timeline-clock-window-pointer-dot {
+  fill: color-mix(in srgb, var(--accent-color) 74%, white);
+  stroke: rgba(18, 32, 51, 0.3);
+  stroke-width: 0.8;
+  pointer-events: none;
+}
+
+.timeline-clock-bisector {
   stroke: rgba(33, 77, 152, 0.38);
   stroke-width: 1.5;
   stroke-linecap: round;
@@ -1427,12 +1450,22 @@
   stroke-width: 2;
 }
 
-.timeline-clock-handle.is-resize {
-  fill: color-mix(in srgb, white 82%, var(--accent-color));
+.timeline-clock-handle.is-window-endpoint {
+  fill: color-mix(in srgb, #ffe9a8 68%, #ff9f1a);
+  stroke: color-mix(in srgb, #8f4a00 74%, #122033);
+}
+
+.timeline-clock-handle.is-window-endpoint.is-at-limit {
+  fill: color-mix(in srgb, #ff6b6b 75%, #ff1a1a);
+  stroke: #8b0000;
+  filter: drop-shadow(0 0 3px rgba(255, 107, 107, 0.6));
 }
 
 .timeline-clock-handle.is-move {
   fill: color-mix(in srgb, white 88%, var(--accent-color));
+  stroke: color-mix(in srgb, var(--accent-color) 82%, #122033);
+  stroke-width: 1.8;
+  stroke-linejoin: miter;
 }
 
 .timeline-clock-handle-hit {
@@ -1440,7 +1473,7 @@
   stroke: transparent;
 }
 
-.timeline-clock-handle-hit.is-resize-hit {
+.timeline-clock-handle-hit.is-window-endpoint-hit {
   cursor: nwse-resize;
 }
 
@@ -1450,6 +1483,18 @@
 
 .timeline-clock-card.is-dragging .timeline-clock-handle {
   cursor: grabbing;
+}
+
+.timeline-clock-card:not(.is-dragging) .timeline-clock-handle.is-window-endpoint,
+.timeline-clock-card:not(.is-dragging) .timeline-clock-window-pointer-dot,
+.timeline-clock-card:not(.is-dragging) .timeline-clock-window-pointer {
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
+}
+
+.timeline-clock-card:not(.is-dragging) .timeline-clock-handle.is-window-endpoint:hover {
+  filter: brightness(1.03);
 }
 
 .timeline-clock-card.is-dragging .timeline-clock-move-hit-ring,
