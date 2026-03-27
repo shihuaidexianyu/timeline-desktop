@@ -10,32 +10,32 @@ import type {
 const DAY_SECONDS = 24 * 60 * 60
 const MERGE_GAP_SECONDS = 60
 const APP_PRESET_COLORS: string[] = [
-  '#2563eb',
-  '#dc2626',
-  '#16a34a',
-  '#d97706',
+  '#4f46e5',
+  '#0f766e',
+  '#b45309',
   '#7c3aed',
-  '#0891b2',
+  '#0f7490',
+  '#c2410c',
   '#be123c',
   '#65a30d',
-  '#ea580c',
-  '#0f766e',
+  '#1d4ed8',
+  '#15803d',
   '#9333ea',
-  '#ca8a04',
+  '#a16207',
 ]
 const DOMAIN_PRESET_COLORS: string[] = [
-  '#1d4ed8',
-  '#b91c1c',
-  '#15803d',
+  '#4338ca',
+  '#0f766e',
   '#c2410c',
   '#6d28d9',
-  '#0f766e',
   '#a21caf',
   '#0369a1',
-  '#4d7c0f',
-  '#d97706',
   '#be185d',
-  '#4338ca',
+  '#4d7c0f',
+  '#b45309',
+  '#1d4ed8',
+  '#15803d',
+  '#4f46e5',
 ]
 
 export type TooltipDatum = {
@@ -416,7 +416,7 @@ function buildDonutSlices(segments: ChartSegment[], topN: number) {
       label: '其他',
       value: otherValue,
       percentage: total === 0 ? 0 : (otherValue / total) * 100,
-      color: '#94a3b8',
+      color: '#98a2b3',
     })
   }
 
@@ -587,12 +587,12 @@ function presenceLabel(state: PresenceSegment['state']) {
 
 function presenceColor(state: PresenceSegment['state']) {
   if (state === 'active') {
-    return '#22c55e'
+    return '#4f46e5'
   }
   if (state === 'idle') {
-    return '#64748b'
+    return '#0f766e'
   }
-  return '#334155'
+  return '#64748b'
 }
 
 export function todayString() {

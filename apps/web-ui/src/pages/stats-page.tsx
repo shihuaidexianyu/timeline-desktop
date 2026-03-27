@@ -261,7 +261,7 @@ function FocusBalanceCard(props: {
             label: '活跃',
             value: props.activeSeconds,
             percentage: presenceTotal === 0 ? 0 : (props.activeSeconds / presenceTotal) * 100,
-            color: '#2f6fdb',
+            color: 'var(--presence-active)',
         },
         {
             id: 'presence-idle',
@@ -269,7 +269,7 @@ function FocusBalanceCard(props: {
             label: '空闲',
             value: props.idleSeconds,
             percentage: presenceTotal === 0 ? 0 : (props.idleSeconds / presenceTotal) * 100,
-            color: '#43d6b0',
+            color: 'var(--presence-idle)',
         },
         {
             id: 'presence-locked',
@@ -277,7 +277,7 @@ function FocusBalanceCard(props: {
             label: '锁定',
             value: props.lockedSeconds,
             percentage: presenceTotal === 0 ? 0 : (props.lockedSeconds / presenceTotal) * 100,
-            color: '#8b7dff',
+            color: 'var(--presence-locked)',
         },
     ]
 
@@ -327,7 +327,7 @@ function FocusBalanceCard(props: {
                                 onClick={() => setSelectedPresenceKey('active')}
                             >
                                 <span className="presence-legend-name">
-                                    <i style={{ backgroundColor: '#2f6fdb' }} />
+                                    <i style={{ backgroundColor: 'var(--presence-active)' }} />
                                     活跃
                                 </span>
                                 <strong>{formatDuration(props.activeSeconds)}</strong>
@@ -338,7 +338,7 @@ function FocusBalanceCard(props: {
                                 onClick={() => setSelectedPresenceKey('idle')}
                             >
                                 <span className="presence-legend-name">
-                                    <i style={{ backgroundColor: '#43d6b0' }} />
+                                    <i style={{ backgroundColor: 'var(--presence-idle)' }} />
                                     空闲
                                 </span>
                                 <strong>{formatDuration(props.idleSeconds)}</strong>
@@ -349,7 +349,7 @@ function FocusBalanceCard(props: {
                                 onClick={() => setSelectedPresenceKey('locked')}
                             >
                                 <span className="presence-legend-name">
-                                    <i style={{ backgroundColor: '#8b7dff' }} />
+                                    <i style={{ backgroundColor: 'var(--presence-locked)' }} />
                                     锁定
                                 </span>
                                 <strong>{formatDuration(props.lockedSeconds)}</strong>
