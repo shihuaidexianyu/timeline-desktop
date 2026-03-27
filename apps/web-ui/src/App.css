@@ -47,18 +47,18 @@
 }
 
 .sidebar-brand h1 {
-  font-size: 1.34rem;
+  font-size: 1.61rem;
 }
 
 .page-title {
-  font-size: 1.48rem;
+  font-size: 1.78rem;
 }
 
 .sidebar-text,
 .hero-text {
   margin: 6px 0 0;
   color: var(--text-soft);
-  font-size: 0.9rem;
+  font-size: 1.08rem;
   line-height: 1.6;
 }
 
@@ -72,7 +72,7 @@
 .settings-list dt {
   color: var(--text-dim);
   font-family: var(--mono-family);
-  font-size: 0.74rem;
+  font-size: 0.89rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -126,7 +126,7 @@
 .sidebar-status small {
   color: var(--text-soft);
   font-family: var(--mono-family);
-  font-size: 0.76rem;
+  font-size: 0.92rem;
 }
 
 .main-shell {
@@ -153,12 +153,12 @@
   gap: 6px;
   color: var(--text-soft);
   font-family: var(--mono-family);
-  font-size: 0.8rem;
+  font-size: 0.96rem;
 }
 
 .activity-meta strong {
   color: var(--text-dim);
-  font-size: 0.76rem;
+  font-size: 0.92rem;
   font-weight: 500;
   text-transform: uppercase;
 }
@@ -384,13 +384,13 @@
 
 .showcase-card-head h2 {
   margin: 4px 0 0;
-  font-size: 1.24rem;
+  font-size: 1.49rem;
 }
 
 .showcase-copy {
   margin: 0;
   color: var(--text-soft);
-  font-size: 0.82rem;
+  font-size: 0.99rem;
   line-height: 1.6;
 }
 
@@ -406,7 +406,7 @@
   background: var(--accent-soft);
   color: var(--accent-text);
   font-family: var(--mono-family);
-  font-size: 0.68rem;
+  font-size: 0.82rem;
   font-weight: 600;
 }
 
@@ -463,7 +463,7 @@
 .focus-metric-card span {
   color: var(--text-dim);
   font-family: var(--mono-family);
-  font-size: 0.62rem;
+  font-size: 0.74rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -473,7 +473,7 @@
 .weekly-summary-row strong {
   color: var(--text-main);
   font-family: var(--mono-family);
-  font-size: 0.95rem;
+  font-size: 1.14rem;
 }
 
 .weekly-summary-row {
@@ -491,7 +491,7 @@
 .weekly-summary-row small {
   color: var(--text-soft);
   font-family: var(--mono-family);
-  font-size: 0.68rem;
+  font-size: 0.82rem;
 }
 
 .weekly-legend {
@@ -511,7 +511,7 @@
   background: rgba(250, 252, 255, 0.94);
   color: var(--text-dim);
   font-family: var(--mono-family);
-  font-size: 0.66rem;
+  font-size: 0.80rem;
 }
 
 .weekly-legend-item::before {
@@ -670,7 +670,7 @@
 .weekly-axis-label {
   color: var(--text-dim);
   font-family: var(--mono-family);
-  font-size: 0.62rem;
+  font-size: 0.74rem;
 }
 
 .weekly-bar-day {
@@ -712,14 +712,14 @@
 .mini-list-head span {
   color: var(--text-dim);
   font-family: var(--mono-family);
-  font-size: 0.62rem;
+  font-size: 0.74rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
 
 .mini-list-head strong {
   color: var(--text-main);
-  font-size: 0.82rem;
+  font-size: 0.99rem;
 }
 
 .mini-usage-list {
@@ -736,7 +736,7 @@
   border: none;
   background: transparent;
   font-family: var(--mono-family);
-  font-size: 0.7rem;
+  font-size: 0.85rem;
   text-align: left;
   cursor: pointer;
 }
@@ -820,7 +820,7 @@
   gap: 8px;
   color: var(--text-dim);
   font-family: var(--mono-family);
-  font-size: 0.68rem;
+  font-size: 0.82rem;
 }
 
 .presence-legend-name i {
@@ -834,7 +834,7 @@
   display: block;
   color: var(--text-main);
   font-family: var(--mono-family);
-  font-size: 0.8rem;
+  font-size: 0.96rem;
   font-variant-numeric: tabular-nums;
   min-height: 1.2em;
   white-space: nowrap;
@@ -850,7 +850,7 @@
 
 .metric-card strong {
   font-family: var(--mono-family);
-  font-size: 1.28rem;
+  font-size: 1.54rem;
   color: var(--text-main);
 }
 
@@ -1014,7 +1014,7 @@
 .ranking-row span,
 .settings-list dd {
   font-family: var(--mono-family);
-  font-size: 0.82rem;
+  font-size: 0.99rem;
   color: var(--text-main);
 }
 
@@ -1036,14 +1036,14 @@
   margin-top: 14px;
   color: var(--danger-color);
   font-family: var(--mono-family);
-  font-size: 0.78rem;
+  font-size: 0.94rem;
 }
 
 .settings-notice {
   margin-top: 10px;
   color: var(--success-color-strong);
   font-family: var(--mono-family);
-  font-size: 0.78rem;
+  font-size: 0.94rem;
 }
 
 .settings-update-card {
@@ -1070,27 +1070,27 @@
 .settings-update-meta {
   color: var(--text-dim);
   font-family: var(--mono-family);
-  font-size: 0.68rem;
+  font-size: 0.82rem;
 }
 
 .settings-update-summary strong {
   color: var(--text-main);
   font-family: var(--mono-family);
-  font-size: 0.84rem;
+  font-size: 1.01rem;
   overflow-wrap: anywhere;
 }
 
 .settings-update-copy {
   margin: 0;
   color: var(--text-soft);
-  font-size: 0.82rem;
+  font-size: 0.99rem;
   line-height: 1.6;
 }
 
 .settings-update-copy code {
   color: var(--text-main);
   font-family: var(--mono-family);
-  font-size: 0.76rem;
+  font-size: 0.92rem;
 }
 
 .settings-update-meta {
@@ -1101,7 +1101,7 @@
   width: fit-content;
   color: var(--accent-color);
   font-family: var(--mono-family);
-  font-size: 0.74rem;
+  font-size: 0.89rem;
   text-decoration: none;
 }
 
@@ -1130,13 +1130,13 @@
 .settings-config-field span {
   color: var(--text-dim);
   font-family: var(--mono-family);
-  font-size: 0.68rem;
+  font-size: 0.82rem;
 }
 
 .settings-config-help {
   color: #6f8ea1;
   font-family: var(--mono-family);
-  font-size: 0.66rem;
+  font-size: 0.80rem;
   line-height: 1.45;
 }
 
@@ -1167,7 +1167,7 @@
   gap: 8px;
   color: var(--text-main);
   font-family: var(--mono-family);
-  font-size: 0.74rem;
+  font-size: 0.89rem;
 }
 
 .settings-config-check>span {
@@ -1177,7 +1177,7 @@
 
 .settings-config-check small {
   color: #6f8ea1;
-  font-size: 0.66rem;
+  font-size: 0.80rem;
   line-height: 1.4;
 }
 
@@ -1195,7 +1195,7 @@
   background: color-mix(in srgb, white 84%, var(--accent-color));
   color: var(--accent-text);
   font: inherit;
-  font-size: 0.76rem;
+  font-size: 0.92rem;
   cursor: pointer;
 }
 
@@ -1239,7 +1239,7 @@
   background: color-mix(in srgb, white 88%, var(--accent-color));
   color: var(--text-soft);
   font-family: var(--mono-family);
-  font-size: 0.72rem;
+  font-size: 0.87rem;
   white-space: nowrap;
 }
 
@@ -1275,7 +1275,7 @@
 .timeline-control-label {
   color: var(--text-dim);
   font-family: var(--mono-family);
-  font-size: 0.68rem;
+  font-size: 0.82rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -1283,7 +1283,7 @@
 .timeline-control-hint {
   color: #6f819c;
   font-family: var(--mono-family);
-  font-size: 0.68rem;
+  font-size: 0.82rem;
 }
 
 .timeline-control-button {
@@ -1295,7 +1295,7 @@
   background: rgba(255, 255, 255, 0.92);
   color: var(--text-main);
   font: inherit;
-  font-size: 0.78rem;
+  font-size: 0.94rem;
   transition:
     background-color 0.15s ease,
     border-color 0.15s ease,
@@ -1524,21 +1524,21 @@
 .timeline-clock-center strong {
   color: #18345a;
   font-family: var(--mono-family);
-  font-size: 0.8rem;
+  font-size: 0.96rem;
   font-variant-numeric: tabular-nums;
 }
 
 .timeline-clock-center small {
   color: #6f819c;
   font-family: var(--mono-family);
-  font-size: 0.7rem;
+  font-size: 0.85rem;
 }
 
 .timeline-clock-instruction {
   margin: 0;
   color: #6f819c;
   font-family: var(--mono-family);
-  font-size: 0.68rem;
+  font-size: 0.82rem;
   line-height: 1.4;
   text-align: right;
   max-width: 220px;
@@ -1559,13 +1559,13 @@
 .timeline-snapshot-card small {
   color: var(--text-dim);
   font-family: var(--mono-family);
-  font-size: 0.66rem;
+  font-size: 0.80rem;
 }
 
 .timeline-snapshot-card strong {
   color: #162744;
   font-family: var(--mono-family);
-  font-size: 0.84rem;
+  font-size: 1.01rem;
   min-height: 1.2em;
 }
 
@@ -1623,12 +1623,12 @@
   gap: 12px;
   color: var(--text-soft);
   font-family: var(--mono-family);
-  font-size: 0.72rem;
+  font-size: 0.87rem;
 }
 
 .detail-list-meta strong {
   color: var(--text-main);
-  font-size: 0.74rem;
+  font-size: 0.89rem;
   font-weight: 600;
 }
 
@@ -1636,7 +1636,7 @@
 .state-card {
   color: var(--text-dim);
   font-family: var(--mono-family);
-  font-size: 0.8rem;
+  font-size: 0.96rem;
 }
 
 .compact-donut-empty {
@@ -1720,7 +1720,7 @@
 .detail-segment-domain {
   color: var(--text-soft);
   font-family: var(--mono-family);
-  font-size: 0.68rem;
+  font-size: 0.82rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1731,7 +1731,7 @@
 .detail-segment-time {
   color: var(--text-soft);
   font-family: var(--mono-family);
-  font-size: 0.68rem;
+  font-size: 0.82rem;
   line-height: 1.35;
 }
 
@@ -1805,7 +1805,7 @@
 .timeline-devtools-summary strong {
   color: #132033;
   font-family: var(--display-family);
-  font-size: 0.94rem;
+  font-size: 1.13rem;
   font-weight: 600;
   letter-spacing: -0.01em;
 }
@@ -1827,7 +1827,7 @@
   background: rgba(248, 250, 255, 0.96);
   color: #5f7190;
   font-family: var(--mono-family);
-  font-size: 0.7rem;
+  font-size: 0.85rem;
   white-space: nowrap;
 }
 
@@ -1848,7 +1848,7 @@
   background: rgba(239, 244, 252, 0.9);
   color: #19335a;
   font-family: var(--mono-family);
-  font-size: 0.72rem;
+  font-size: 0.87rem;
   font-weight: 600;
   line-height: 1;
 }
@@ -1873,7 +1873,7 @@
   background: rgba(255, 255, 255, 0.92);
   color: #22324a;
   font-family: var(--mono-family);
-  font-size: 0.68rem;
+  font-size: 0.82rem;
 }
 
 .timeline-inspector-item {
@@ -1891,13 +1891,13 @@
 
 .timeline-inspector-item strong {
   color: #15233a;
-  font-size: 0.7rem;
+  font-size: 0.85rem;
   font-weight: 600;
 }
 
 .timeline-inspector-item small {
   color: #72839a;
-  font-size: 0.64rem;
+  font-size: 0.78rem;
 }
 
 .timeline-inspector-empty {
@@ -1933,7 +1933,7 @@
   padding: 0 16px;
   border-right: 1px solid rgba(145, 159, 180, 0.16);
   color: #1c2a40;
-  font-size: 0.78rem;
+  font-size: 0.94rem;
 }
 
 .timeline-axis-label {
@@ -1960,7 +1960,7 @@
   transform: translateX(-50%);
   color: #6b7f9d;
   font-family: var(--mono-family);
-  font-size: 0.7rem;
+  font-size: 0.85rem;
   white-space: nowrap;
   pointer-events: none;
 }
@@ -1997,7 +1997,7 @@
   background: rgba(33, 77, 152, 0.9);
   color: #fff;
   font-family: var(--mono-family);
-  font-size: 0.66rem;
+  font-size: 0.80rem;
   line-height: 1;
   white-space: nowrap;
 }
@@ -2028,14 +2028,14 @@
 }
 
 .timeline-row-head strong {
-  font-size: 0.82rem;
+  font-size: 0.99rem;
   font-weight: 600;
   line-height: 1.15;
 }
 
 .timeline-row-head span {
   color: #7b8ca2;
-  font-size: 0.62rem;
+  font-size: 0.74rem;
 }
 
 .timeline-row-lanes {
@@ -2345,7 +2345,7 @@
   border-right: 1px solid rgba(145, 159, 180, 0.16);
   text-align: left;
   font-family: var(--mono-family);
-  font-size: 0.74rem;
+  font-size: 0.89rem;
 }
 
 .timeline-table-header span:last-child,
@@ -2428,7 +2428,7 @@
 .donut-center-line-primary {
   color: #1d2c43;
   font-family: var(--mono-family);
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 700;
   line-height: 1.2;
 }
@@ -2436,7 +2436,7 @@
 .donut-center-line-secondary {
   color: #6f839f;
   font-family: var(--mono-family);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   line-height: 1.25;
 }
@@ -2444,7 +2444,7 @@
 .donut-center-line-footer {
   color: #6f839f;
   font-family: var(--mono-family);
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.2;
 }
 
@@ -2557,14 +2557,14 @@
 }
 
 .chart-tooltip strong {
-  font-size: 0.82rem;
+  font-size: 0.99rem;
   color: var(--text-main);
 }
 
 .chart-tooltip span {
   color: var(--text-soft);
   font-family: var(--mono-family);
-  font-size: 0.74rem;
+  font-size: 0.89rem;
 }
 
 /* ── Period summary cards (today / week / month) ── */
@@ -2578,7 +2578,7 @@
 .period-card small {
   color: var(--text-soft);
   font-family: var(--mono-family);
-  font-size: 0.76rem;
+  font-size: 0.92rem;
 }
 
 .stats-calendar-card {
@@ -2667,7 +2667,7 @@
 .calendar-weekday {
   text-align: center;
   font-family: var(--mono-family);
-  font-size: 0.64rem;
+  font-size: 0.78rem;
   color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -2757,7 +2757,7 @@
 
 .calendar-day-number {
   font-family: var(--mono-family);
-  font-size: 0.7rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: var(--text-main);
 }
@@ -2770,7 +2770,7 @@
   min-height: 18px;
   color: var(--text-dim);
   font-family: var(--mono-family);
-  font-size: 0.64rem;
+  font-size: 0.78rem;
 }
 
 .calendar-legend-swatches {
@@ -2798,7 +2798,7 @@
 .calendar-selection-summary strong {
   display: block;
   font-family: var(--mono-family);
-  font-size: 0.76rem;
+  font-size: 0.92rem;
   color: var(--text-main);
   min-height: 1.2em;
 }
@@ -2807,7 +2807,7 @@
   display: block;
   color: var(--text-soft);
   font-family: var(--mono-family);
-  font-size: 0.68rem;
+  font-size: 0.82rem;
   min-height: 1.2em;
 }
 
