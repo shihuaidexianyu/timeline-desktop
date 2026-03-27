@@ -1,5 +1,7 @@
 # 架构设计
 
+> 前端交互与骨架实现规范见：[frontend-guidelines.md](./frontend-guidelines.md)
+
 ## 模块划分
 
 - `timeline-agent` 负责本地采集、状态合并、SQLite 存储和 HTTP API

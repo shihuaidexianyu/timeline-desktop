@@ -20,6 +20,10 @@
   agent、前端、扩展共享的数据结构。
 - `docs/`
   架构、接口和数据模型说明。
+  - [架构设计](docs/architecture.md)
+  - [接口说明](docs/api.md)
+  - [数据模型](docs/schema.md)
+  - [前端交互与骨架规范](docs/frontend-guidelines.md)
 
 ## 当前能力
 
