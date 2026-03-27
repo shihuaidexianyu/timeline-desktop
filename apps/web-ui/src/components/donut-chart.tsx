@@ -163,7 +163,7 @@ export function DonutChart(props: {
                 },
               }
           }
-          style={{ height: 288, width: '100%', paddingInline: 14 }}
+          style={{ height: 288, width: '100%' }}
         />
 
         <div className="donut-center-copy donut-center-copy-main" aria-hidden={isLoading ? 'true' : undefined}>

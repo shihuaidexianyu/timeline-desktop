@@ -2349,6 +2349,10 @@
   position: relative;
 }
 
+.donut-visual-shell {
+  padding-inline: 14px;
+}
+
 .donut-center-copy {
   position: absolute;
   inset: 0;
@@ -2432,7 +2436,6 @@
 
 .donut-visual-overlay {
   min-height: 288px;
-  padding-inline: 14px;
 }
 
 .compact-donut-overlay {
