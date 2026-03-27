@@ -1033,6 +1033,75 @@
   font-size: 0.78rem;
 }
 
+.settings-update-card {
+  display: grid;
+  gap: 12px;
+}
+
+.settings-update-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.settings-update-summary div {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid rgba(145, 159, 180, 0.18);
+  border-radius: 14px;
+  background: rgba(247, 250, 255, 0.92);
+}
+
+.settings-update-summary span,
+.settings-update-meta {
+  color: var(--text-dim);
+  font-family: var(--mono-family);
+  font-size: 0.68rem;
+}
+
+.settings-update-summary strong {
+  color: var(--text-main);
+  font-family: var(--mono-family);
+  font-size: 0.84rem;
+  overflow-wrap: anywhere;
+}
+
+.settings-update-copy {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.settings-update-copy code {
+  color: var(--text-main);
+  font-family: var(--mono-family);
+  font-size: 0.76rem;
+}
+
+.settings-update-meta {
+  margin: 0;
+}
+
+.settings-update-link {
+  width: fit-content;
+  color: var(--accent-color);
+  font-family: var(--mono-family);
+  font-size: 0.74rem;
+  text-decoration: none;
+}
+
+.settings-update-link:hover {
+  color: var(--accent-text);
+}
+
+.settings-update-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .settings-config-grid {
   margin-top: 14px;
   display: grid;
@@ -1115,6 +1184,12 @@
   font: inherit;
   font-size: 0.76rem;
   cursor: pointer;
+}
+
+.settings-save-button-secondary {
+  border-color: rgba(145, 159, 180, 0.22);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--text-main);
 }
 
 .settings-save-button:disabled {
@@ -3134,6 +3209,7 @@
   .period-summary-grid,
   .stats-grid-lists,
   .showcase-stat-grid,
+  .settings-update-summary,
   .focus-distribution-layout,
   .focus-metric-stack,
   .weekly-summary-row,

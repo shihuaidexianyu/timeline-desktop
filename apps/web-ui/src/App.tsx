@@ -4,14 +4,18 @@ import { memo, startTransition, useEffect, useMemo, useRef, useState } from 'rea
 import './App.css'
 import {
   API_BASE_URL,
+  getAppUpdateInfo,
   getAgentSettings,
   getMonthCalendar,
   getPeriodSummary,
   getTimeline,
+  installLatestUpdate,
   updateAgentConfig,
   updateAutostart,
+  type AppUpdateInfo,
   type AgentSettingsResponse,
   type DaySummary,
+  type InstallUpdateResponse,
   type MonthCalendarResponse,
   type PeriodSummaryResponse,
   type TimelineDayResponse,
@@ -51,8 +55,13 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   const [settingsError, setSettingsError] = useState<string | null>(null)
   const [settingsNotice, setSettingsNotice] = useState<string | null>(null)
+  const [updateInfo, setUpdateInfo] = useState<AppUpdateInfo | null>(null)
+  const [updateError, setUpdateError] = useState<string | null>(null)
+  const [updateNotice, setUpdateNotice] = useState<string | null>(null)
   const [savingAutostart, setSavingAutostart] = useState(false)
   const [savingConfig, setSavingConfig] = useState(false)
+  const [checkingUpdate, setCheckingUpdate] = useState(false)
+  const [installingUpdate, setInstallingUpdate] = useState(false)
   const activeOnly = false
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null)
   const [appFilter, setAppFilter] = useState<DashboardFilter>(null)
@@ -66,6 +75,7 @@ function App() {
   const [agentToday, setAgentToday] = useState<string | null>(null)
   const [agentTimezone, setAgentTimezone] = useState<string | null>(null)
   const skipNextDateLoadRef = useRef(false)
+  const didAutoCheckUpdateRef = useRef(false)
 
   useEffect(() => {
     if (selectedDate !== null) {
@@ -240,6 +250,15 @@ function App() {
     setViewStartHour((current) => clampViewStart(current, zoomHours))
   }, [zoomHours])
 
+  useEffect(() => {
+    if (page !== 'settings' || agentSettings === null || didAutoCheckUpdateRef.current) {
+      return
+    }
+
+    didAutoCheckUpdateRef.current = true
+    void refreshUpdateInfo(true)
+  }, [agentSettings, page])
+
   const dashboard = useMemo(
     () => (timeline ? buildDashboardModel(timeline, activeOnly) : null),
     [activeOnly, timeline],
@@ -255,6 +274,49 @@ function App() {
   )
   const hasDashboard = dashboard !== null
   const shouldRenderPage = hasDashboard || (isBootstrapping && !error)
+
+  async function refreshUpdateInfo(silent = false) {
+    if (!silent) {
+      setCheckingUpdate(true)
+    }
+    setUpdateError(null)
+    setUpdateNotice(null)
+
+    try {
+      const nextUpdateInfo = await getAppUpdateInfo()
+      setUpdateInfo(nextUpdateInfo)
+      setUpdateNotice(
+        nextUpdateInfo.has_update
+          ? `发现新版本 ${nextUpdateInfo.latest_version}，可以直接在线升级。`
+          : '当前已经是最新版本。',
+      )
+    } catch (loadError) {
+      const message =
+        loadError instanceof Error ? loadError.message : '检查更新时发生未知错误'
+      setUpdateError(message)
+    } finally {
+      if (!silent) {
+        setCheckingUpdate(false)
+      }
+    }
+  }
+
+  async function handleInstallLatestUpdate() {
+    setInstallingUpdate(true)
+    setUpdateError(null)
+    setUpdateNotice(null)
+
+    try {
+      const result: InstallUpdateResponse = await installLatestUpdate()
+      setUpdateNotice(`已开始升级到 ${result.target_version}，本地服务即将自动重启。`)
+    } catch (installError) {
+      const message =
+        installError instanceof Error ? installError.message : '启动在线升级失败'
+      setUpdateError(message)
+    } finally {
+      setInstallingUpdate(false)
+    }
+  }
 
   function applySelectedDate(nextDate: string) {
     const nextWindow = defaultTimelineViewport(nextDate, agentToday, agentTimezone)
@@ -382,12 +444,17 @@ function App() {
                 error={error}
                 settingsError={settingsError}
                 settingsNotice={settingsNotice}
+                updateInfo={updateInfo}
+                updateError={updateError}
+                updateNotice={updateNotice}
                 lastUpdatedAt={lastUpdatedAt}
                 selectedDate={resolvedSelectedDate}
                 timezone={agentTimezone ?? timeline?.timezone ?? '--'}
                 savingAutostart={savingAutostart}
                 savingConfig={savingConfig}
                 isSettingsRefreshing={isSettingsRefreshing}
+                checkingUpdate={checkingUpdate}
+                installingUpdate={installingUpdate}
                 onToggleAutostart={async (enabled) => {
                   setSavingAutostart(true)
                   setSettingsError(null)
@@ -447,6 +514,12 @@ function App() {
                   } finally {
                     setSavingConfig(false)
                   }
+                }}
+                onCheckUpdate={async () => {
+                  await refreshUpdateInfo()
+                }}
+                onInstallUpdate={async () => {
+                  await handleInstallLatestUpdate()
                 }}
               />
             ) : null}
@@ -724,12 +797,17 @@ function SettingsPage(props: {
   error: string | null
   settingsError: string | null
   settingsNotice: string | null
+  updateInfo: AppUpdateInfo | null
+  updateError: string | null
+  updateNotice: string | null
   lastUpdatedAt: string | null
   selectedDate: string
   timezone: string
   savingAutostart: boolean
   savingConfig: boolean
   isSettingsRefreshing: boolean
+  checkingUpdate: boolean
+  installingUpdate: boolean
   onToggleAutostart: (enabled: boolean) => Promise<void>
   onUpdateConfig: (payload: {
     idle_threshold_secs: number
@@ -739,6 +817,8 @@ function SettingsPage(props: {
     ignored_apps: string[]
     ignored_domains: string[]
   }) => Promise<void>
+  onCheckUpdate: () => Promise<void>
+  onInstallUpdate: () => Promise<void>
 }) {
   const [idleThresholdSecs, setIdleThresholdSecs] = useState(60)
   const [pollIntervalMillis, setPollIntervalMillis] = useState(1000)
@@ -802,8 +882,12 @@ function SettingsPage(props: {
               <RefreshBadge active={props.isSettingsRefreshing} />
             </div>
             <dl className="settings-list">
-              {props.loading ? <SettingsListSkeleton rows={5} /> : (
+              {props.loading ? <SettingsListSkeleton rows={6} /> : (
                 <>
+                  <div>
+                    <dt>当前版本</dt>
+                    <dd>v{props.agentSettings?.app_version ?? '--'}</dd>
+                  </div>
                   <div>
                     <dt>接口地址</dt>
                     <dd>{API_BASE_URL}</dd>
@@ -827,6 +911,92 @@ function SettingsPage(props: {
                 </>
               )}
             </dl>
+          </div>
+
+          <div className="panel page-panel settings-card">
+            <div className="panel-header">
+              <div>
+                <p className="section-kicker">升级</p>
+                <h2>在线升级</h2>
+              </div>
+            </div>
+
+            <div className="settings-update-card">
+              <div className="settings-update-summary">
+                <div>
+                  <span>当前版本</span>
+                  <strong>v{props.agentSettings?.app_version ?? '--'}</strong>
+                </div>
+                <div>
+                  <span>Latest</span>
+                  <strong>
+                    {props.updateInfo ? `v${props.updateInfo.latest_version}` : '等待检查'}
+                  </strong>
+                </div>
+                <div>
+                  <span>安装包</span>
+                  <strong>{props.updateInfo?.asset_name ?? 'timeline-portable-*.zip'}</strong>
+                </div>
+              </div>
+
+              <p className="settings-update-copy">
+                从 GitHub Release latest 拉取最新便携包，只覆盖程序文件，保留本地
+                <code>config/timeline-agent.toml</code> 和 <code>data/</code>。
+              </p>
+
+              {props.updateInfo?.published_at ? (
+                <p className="settings-update-meta">
+                  发布时间 {new Date(props.updateInfo.published_at).toLocaleString()}
+                </p>
+              ) : null}
+
+              {props.updateInfo?.release_url ? (
+                <a
+                  className="settings-update-link"
+                  href={props.updateInfo.release_url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  查看 Release
+                </a>
+              ) : null}
+
+              <div className="settings-update-actions">
+                <button
+                  type="button"
+                  className="settings-save-button"
+                  disabled={props.loading || props.checkingUpdate || props.installingUpdate}
+                  onClick={() => {
+                    void props.onCheckUpdate()
+                  }}
+                >
+                  {props.checkingUpdate ? '检查中…' : '检查更新'}
+                </button>
+
+                <button
+                  type="button"
+                  className="settings-save-button settings-save-button-secondary"
+                  disabled={
+                    props.loading ||
+                    props.checkingUpdate ||
+                    props.installingUpdate ||
+                    !props.updateInfo?.has_update
+                  }
+                  onClick={() => {
+                    void props.onInstallUpdate()
+                  }}
+                >
+                  {props.installingUpdate ? '升级中…' : '升级并重启'}
+                </button>
+              </div>
+
+              {!props.loading && props.updateError ? (
+                <div className="settings-error">{props.updateError}</div>
+              ) : null}
+              {!props.loading && props.updateNotice ? (
+                <div className="settings-notice">{props.updateNotice}</div>
+              ) : null}
+            </div>
           </div>
 
           <div className="panel page-panel settings-card">

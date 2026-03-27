@@ -137,6 +137,7 @@ pub struct AgentMonitorStatus {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentSettingsResponse {
+    pub app_version: String,
     pub autostart_enabled: bool,
     pub tray_enabled: bool,
     pub web_ui_url: String,
@@ -174,6 +175,25 @@ pub struct UpdateAgentConfigRequest {
 pub struct UpdateAgentConfigResponse {
     pub saved: bool,
     pub requires_restart: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AppUpdateInfo {
+    pub current_version: String,
+    pub latest_version: String,
+    pub has_update: bool,
+    pub release_name: Option<String>,
+    pub release_url: String,
+    pub published_at: Option<String>,
+    pub asset_name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InstallUpdateResponse {
+    pub started: bool,
+    pub target_version: String,
+    pub release_url: String,
+    pub asset_name: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

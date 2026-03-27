@@ -11,6 +11,7 @@ mod http;
 mod state;
 mod system;
 mod trackers;
+mod updater;
 mod windows;
 
 use crate::config::AppConfig;

@@ -64,6 +64,7 @@ export type AgentMonitorStatus = {
 }
 
 export type AgentSettingsResponse = {
+  app_version: string
   autostart_enabled: boolean
   tray_enabled: boolean
   web_ui_url: string
@@ -97,6 +98,23 @@ export type UpdateAgentConfigRequest = {
 export type UpdateAgentConfigResponse = {
   saved: boolean
   requires_restart: boolean
+}
+
+export type AppUpdateInfo = {
+  current_version: string
+  latest_version: string
+  has_update: boolean
+  release_name: string | null
+  release_url: string
+  published_at: string | null
+  asset_name: string
+}
+
+export type InstallUpdateResponse = {
+  started: boolean
+  target_version: string
+  release_url: string
+  asset_name: string
 }
 
 type ApiEnvelope<T> = {
@@ -167,6 +185,7 @@ export function getFocusStats(date: string) {
 export function getAgentSettings() {
   return request<AgentSettingsResponse>('/api/settings').then((raw) => ({
     ...raw,
+    app_version: typeof raw.app_version === 'string' ? raw.app_version : '0.0.0',
     idle_threshold_secs:
       typeof raw.idle_threshold_secs === 'number' ? raw.idle_threshold_secs : 300,
     poll_interval_millis:
@@ -178,6 +197,10 @@ export function getAgentSettings() {
     ignored_apps: Array.isArray(raw.ignored_apps) ? raw.ignored_apps : [],
     ignored_domains: Array.isArray(raw.ignored_domains) ? raw.ignored_domains : [],
   }))
+}
+
+export function getAppUpdateInfo() {
+  return request<AppUpdateInfo>('/api/update/check')
 }
 
 export async function updateAutostart(payload: UpdateAutostartRequest) {
@@ -209,6 +232,19 @@ export async function updateAgentConfig(payload: UpdateAgentConfigRequest) {
   const result = (await response.json()) as ApiEnvelope<UpdateAgentConfigResponse>
   if (!response.ok || !result.ok || result.data === null) {
     throw new Error(result.error?.message ?? '更新本地配置失败')
+  }
+
+  return result.data
+}
+
+export async function installLatestUpdate() {
+  const response = await fetch(`${API_BASE_URL}/api/update/install`, {
+    method: 'POST',
+  })
+
+  const result = (await response.json()) as ApiEnvelope<InstallUpdateResponse>
+  if (!response.ok || !result.ok || result.data === null) {
+    throw new Error(result.error?.message ?? '启动在线升级失败')
   }
 
   return result.data

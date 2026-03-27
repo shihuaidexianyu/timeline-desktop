@@ -9,6 +9,8 @@ anyhow.workspace = true
 axum.workspace = true
 common = { path = "../../crates/common" }
 fs2 = "0.4.3"
+reqwest.workspace = true
+semver.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sqlx.workspace = true

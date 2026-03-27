@@ -1,6 +1,6 @@
 //! Axum routes for health checks, timelines, stats, browser event ingestion, and settings.
 
-use crate::{state::AgentState, system, trackers::sync_browser_event};
+use crate::{state::AgentState, system, trackers::sync_browser_event, updater};
 use anyhow::Result;
 use axum::extract::{Query, Request, State};
 use axum::http::header::{CONTENT_TYPE, ORIGIN};
@@ -12,9 +12,10 @@ use axum::{
     routing::{get, post},
 };
 use common::{
-    AgentMonitorStatus, AgentSettingsResponse, ApiResponse, BrowserEventPayload, HealthResponse,
-    MonthCalendarResponse, PeriodSummaryResponse, UpdateAgentConfigRequest,
-    UpdateAgentConfigResponse, UpdateAutostartRequest, UpdateAutostartResponse,
+    AgentMonitorStatus, AgentSettingsResponse, ApiResponse, AppUpdateInfo, BrowserEventPayload,
+    HealthResponse, InstallUpdateResponse, MonthCalendarResponse, PeriodSummaryResponse,
+    UpdateAgentConfigRequest, UpdateAgentConfigResponse, UpdateAutostartRequest,
+    UpdateAutostartResponse,
 };
 use serde::Deserialize;
 use time::format_description::parse;
@@ -37,6 +38,8 @@ pub fn build_router(state: AgentState) -> Router {
         .route("/api/settings", get(get_settings))
         .route("/api/settings/autostart", post(post_autostart))
         .route("/api/settings/config", post(post_update_agent_config))
+        .route("/api/update/check", get(get_update_info))
+        .route("/api/update/install", post(post_install_update))
         .route("/api/debug/recent-events", get(get_recent_events))
         .route("/api/events/browser", post(post_browser_event))
         .route("/api/calendar/month", get(get_month_calendar))
@@ -139,6 +142,7 @@ async fn get_settings(
     let monitors = build_monitor_statuses(&state).await;
 
     Ok(Json(ApiResponse::ok(AgentSettingsResponse {
+        app_version: env!("CARGO_PKG_VERSION").to_string(),
         autostart_enabled,
         tray_enabled: state.config().tray_enabled,
         web_ui_url: state.config().effective_web_ui_url(),
@@ -151,6 +155,29 @@ async fn get_settings(
         ignored_domains: runtime_config.ignored_domains,
         monitors,
     })))
+}
+
+async fn get_update_info() -> Result<Json<ApiResponse<AppUpdateInfo>>, AppError> {
+    Ok(Json(ApiResponse::ok(
+        updater::check_for_updates()
+            .await
+            .map_err(AppError::internal)?,
+    )))
+}
+
+async fn post_install_update(
+    State(state): State<AgentState>,
+) -> Result<Json<ApiResponse<InstallUpdateResponse>>, AppError> {
+    let response = updater::install_latest_update(&state)
+        .await
+        .map_err(AppError::internal)?;
+    let state_for_shutdown = state.clone();
+    tokio::spawn(async move {
+        tokio::time::sleep(std::time::Duration::from_millis(350)).await;
+        state_for_shutdown.request_shutdown();
+    });
+
+    Ok(Json(ApiResponse::ok(response)))
 }
 
 async fn post_autostart(

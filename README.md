@@ -31,6 +31,7 @@
 - 提供本地 Web UI
 - 提供系统托盘入口
 - 支持开机自启动开关
+- 支持从 GitHub Release latest 在线升级便携版
 
 ## 隐私边界
 
@@ -153,6 +154,24 @@ npm run dev
 - `browser-extension\`
 
 便携包不再额外生成启动脚本，直接运行 `timeline-agent.exe` 即可。
+
+### 在线升级
+
+设置页现在提供“检查更新”和“升级并重启”入口。
+
+升级流程会：
+
+1. 请求 GitHub Release `latest`
+2. 下载最新的 `timeline-portable-*.zip`
+3. 在 agent 退出后覆盖程序文件
+4. 自动重新启动 `timeline-agent.exe`
+
+升级时会保留本地：
+
+- `config\timeline-agent.toml`
+- `data\`
+
+也就是说，在线升级不会覆盖你的现有数据库和本地配置。
 
 ## GitHub Actions
 
