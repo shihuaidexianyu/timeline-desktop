@@ -23,6 +23,7 @@ export function CalendarGrid(props: {
   onMonthChange: (month: string) => void
 }) {
   const cells = useMemo(() => buildCalendarCells(props.month, props.days), [props.month, props.days])
+  const loadingCells = useMemo(() => buildCalendarCells(props.month, []), [props.month])
   const selectedSummary = useMemo(
     () => props.days.find((day) => day.date === props.selectedDate) ?? null,
     [props.days, props.selectedDate],
@@ -46,12 +47,19 @@ export function CalendarGrid(props: {
             <span key={`weekday-skeleton-${index}`} className="skeleton-block skeleton-inline skeleton-calendar-weekday" />
           ))}
 
-          {Array.from({ length: 35 }, (_, index) => (
-            <span
-              key={`calendar-cell-skeleton-${index}`}
-              className="calendar-cell calendar-cell-compact calendar-cell-skeleton"
-            />
-          ))}
+          {loadingCells.map((cell) =>
+            cell.date ? (
+              <span
+                key={`calendar-cell-skeleton-${cell.key}`}
+                className="calendar-cell calendar-cell-compact calendar-cell-skeleton"
+              />
+            ) : (
+              <span
+                key={`calendar-cell-skeleton-${cell.key}`}
+                className="calendar-cell calendar-cell-compact is-empty calendar-cell-skeleton-empty"
+              />
+            ),
+          )}
         </div>
 
         <div className="calendar-legend calendar-legend-skeleton">

@@ -182,10 +182,38 @@ function WeeklyRhythmCard(props: {
             {props.loading ? (
                 <div className="weekly-chart-shell weekly-chart-shell-skeleton" aria-hidden="true">
                     <div className="weekly-chart-main weekly-chart-main-skeleton">
+                        {[100, 50, 0].map((position) => (
+                            <span
+                                key={`weekly-grid-skeleton-${position}`}
+                                className="weekly-grid-line weekly-grid-line-skeleton"
+                                style={{ bottom: `${position}%` }}
+                            />
+                        ))}
                         <div className="weekly-bars weekly-bars-skeleton">
-                            {Array.from({ length: 7 }, (_, index) => (
+                            {[
+                                { active: '38%', extra: '14%' },
+                                { active: '62%', extra: '18%' },
+                                { active: '24%', extra: '0%' },
+                                { active: '74%', extra: '10%' },
+                                { active: '54%', extra: '0%' },
+                                { active: '34%', extra: '22%' },
+                                { active: '48%', extra: '12%' },
+                            ].map((bar, index) => (
                                 <div key={`weekly-skeleton-${index}`} className="weekly-bar-column weekly-bar-column-skeleton">
-                                    <span className="skeleton-block weekly-bar-track-skeleton" />
+                                    <div className="weekly-bar-track weekly-bar-track-skeleton">
+                                        <span
+                                            className={`weekly-bar weekly-bar-active skeleton-block ${bar.extra === '0%' ? 'is-cap' : ''}`}
+                                            style={{ height: bar.active }}
+                                        />
+                                        <span
+                                            className={`weekly-bar weekly-bar-focus-extra skeleton-block ${bar.extra !== '0%' ? 'is-cap' : ''}`}
+                                            style={{
+                                                height: bar.extra,
+                                                bottom: `calc(${bar.active} - 2px)`,
+                                                opacity: bar.extra === '0%' ? 0 : 1,
+                                            }}
+                                        />
+                                    </div>
                                     <span className="skeleton-block skeleton-inline skeleton-weekday-label" />
                                 </div>
                             ))}

@@ -2597,20 +2597,24 @@
   flex: 1;
 }
 
+.compact-donut-skeleton {
+  position: relative;
+}
+
 .donut-visual-skeleton {
   position: relative;
-  display: grid;
-  justify-items: center;
-  align-content: center;
-  gap: 10px;
   min-height: 288px;
   padding-inline: 14px;
 }
 
 .donut-ring-skeleton {
+  position: absolute;
+  top: 50%;
+  left: 50%;
   width: 182px;
   height: 182px;
   border-radius: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .donut-ring-skeleton-compact {
@@ -2620,22 +2624,42 @@
 
 .donut-total-skeleton {
   width: 96px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .donut-total-skeleton-compact {
   width: 88px;
+  top: 38%;
 }
 
 .donut-caption-skeleton {
   width: 66px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .donut-caption-skeleton-compact {
   width: 74px;
+  top: 49%;
 }
 
 .donut-footer-skeleton {
   width: 104px;
+  position: absolute;
+  top: 61%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.donut-total-skeleton-main {
+  top: 41%;
+}
+
+.donut-caption-skeleton-main {
+  top: 52%;
 }
 
 .ranking-list-skeleton {
@@ -2678,6 +2702,14 @@
 
 .weekly-chart-main-skeleton {
   min-height: 248px;
+}
+
+.weekly-grid-line-skeleton {
+  border-top-style: solid;
+}
+
+.weekly-chart-shell-skeleton .weekly-bar-focus-extra::after {
+  display: none;
 }
 
 .weekly-bars-skeleton {
@@ -2761,6 +2793,11 @@
   background: rgba(246, 249, 255, 0.92);
 }
 
+.calendar-cell-skeleton-empty {
+  background: transparent;
+  border-color: transparent;
+}
+
 .calendar-legend-skeleton {
   gap: 12px;
 }
@@ -2811,11 +2848,7 @@
 
 .timeline-axis-track-skeleton {
   position: relative;
-  min-height: 56px;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding-top: 8px;
+  min-height: 44px;
 }
 
 .skeleton-axis-title {
@@ -2824,6 +2857,15 @@
 
 .skeleton-timeline-tick {
   width: 32px;
+  position: absolute;
+  top: 9px;
+  left: 0;
+  transform: translateX(-50%);
+}
+
+.timeline-axis-tick-skeleton:first-child .skeleton-timeline-tick {
+  left: 10px;
+  transform: none;
 }
 
 .timeline-lane-stack-skeleton {
@@ -2831,60 +2873,20 @@
   gap: 12px;
 }
 
-.timeline-row-skeleton {
-  display: grid;
-  grid-template-columns: var(--timeline-label-width, 132px) minmax(0, 1fr);
-  gap: 12px;
-  align-items: start;
-}
-
 .skeleton-timeline-row-label {
   width: 44px;
 }
 
-.timeline-row-track-skeleton {
-  position: relative;
-  min-height: 88px;
-  border: 1px solid rgba(145, 159, 180, 0.14);
-  border-radius: 14px;
-  background: rgba(248, 250, 255, 0.88);
+.skeleton-timeline-row-meta {
+  width: 28px;
+}
+
+.timeline-waterfall-body-skeleton {
   overflow: hidden;
 }
 
-.timeline-segment-skeleton {
-  position: absolute;
-  height: 18px;
-  border-radius: 999px;
-}
-
-.timeline-segment-skeleton-0 {
-  top: 16px;
-  left: 4%;
-  width: 18%;
-}
-
-.timeline-segment-skeleton-1 {
-  top: 18px;
-  left: 30%;
-  width: 26%;
-}
-
-.timeline-segment-skeleton-2 {
-  top: 50px;
-  left: 12%;
-  width: 20%;
-}
-
-.timeline-segment-skeleton-3 {
-  top: 48px;
-  left: 42%;
-  width: 16%;
-}
-
-.timeline-segment-skeleton-4 {
-  top: 22px;
-  right: 8%;
-  width: 14%;
+.timeline-row-block-skeleton {
+  min-height: 40px;
 }
 
 .timeline-clock-shell-skeleton {
@@ -2921,6 +2923,21 @@
 
 .detail-segment-item-skeleton {
   cursor: default;
+}
+
+.timeline-row-lanes-skeleton {
+  overflow: hidden;
+}
+
+.timeline-bar-skeleton {
+  top: 3px;
+  bottom: 3px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.timeline-inspector-line-skeleton {
+  opacity: 0.7;
 }
 
 .skeleton-detail-title {

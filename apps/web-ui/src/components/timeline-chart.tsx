@@ -181,28 +181,80 @@ export function TimelineChart(props: {
               <span className="skeleton-block skeleton-inline skeleton-axis-title" />
             </div>
             <div className="timeline-axis-track timeline-axis-track-skeleton">
-              {Array.from({ length: 6 }, (_, index) => (
-                <span
+              {[0, 20, 40, 60, 80, 100].map((position, index) => (
+                <div
                   key={`timeline-tick-${index}`}
-                  className="skeleton-block skeleton-inline skeleton-timeline-tick"
-                />
+                  className="timeline-axis-tick timeline-axis-tick-skeleton"
+                  style={{ left: `${position}%` }}
+                >
+                  <span className="skeleton-block skeleton-inline skeleton-timeline-tick" />
+                </div>
               ))}
             </div>
           </div>
 
-          <div className="timeline-lane-stack timeline-lane-stack-skeleton">
-            {Array.from({ length: 2 }, (_, rowIndex) => (
-              <div key={`timeline-row-${rowIndex}`} className="timeline-row timeline-row-skeleton">
+          <div className="timeline-waterfall-body timeline-waterfall-body-skeleton">
+            {[
+              {
+                key: 'focus',
+                lanes: [
+                  [
+                    { left: '4%', width: '18%' },
+                    { left: '31%', width: '26%' },
+                    { left: '74%', width: '12%' },
+                  ],
+                  [
+                    { left: '12%', width: '20%' },
+                    { left: '42%', width: '15%' },
+                  ],
+                ],
+              },
+              {
+                key: 'presence',
+                lanes: [[
+                  { left: '8%', width: '24%' },
+                  { left: '36%', width: '18%' },
+                  { left: '61%', width: '21%' },
+                ]],
+              },
+            ].map((row, rowIndex) => (
+              <div key={`timeline-row-${row.key}`} className="timeline-row-block timeline-row-block-skeleton">
                 <div className="timeline-row-head">
                   <span className="skeleton-block skeleton-inline skeleton-timeline-row-label" />
+                  {rowIndex === 0 ? (
+                    <span className="skeleton-block skeleton-inline skeleton-timeline-row-meta" />
+                  ) : null}
                 </div>
-                <div className="timeline-row-track timeline-row-track-skeleton">
-                  {Array.from({ length: 5 }, (_, segmentIndex) => (
-                    <span
-                      key={`timeline-segment-${rowIndex}-${segmentIndex}`}
-                      className={`skeleton-block timeline-segment-skeleton timeline-segment-skeleton-${segmentIndex}`}
-                    />
+                <div className="timeline-row-lanes timeline-row-lanes-skeleton">
+                  {row.lanes.map((lane, laneIndex) => (
+                    <div key={`${row.key}-lane-${laneIndex}`} className="timeline-lane">
+                      {[0, 20, 40, 60, 80, 100].map((position, tickIndex) => (
+                        <span
+                          key={`${row.key}-${laneIndex}-${tickIndex}`}
+                          className="timeline-lane-grid"
+                          style={{ left: `${position}%` }}
+                        />
+                      ))}
+
+                      {lane.map((segment, segmentIndex) => (
+                        <span
+                          key={`${row.key}-${laneIndex}-${segmentIndex}`}
+                          className="timeline-bar timeline-bar-skeleton skeleton-block"
+                          style={{
+                            left: segment.left,
+                            width: segment.width,
+                          }}
+                        />
+                      ))}
+                    </div>
                   ))}
+
+                  {rowIndex === 0 ? (
+                    <span
+                      className="timeline-inspector-line timeline-inspector-line-skeleton"
+                      style={{ left: '52%' }}
+                    />
+                  ) : null}
                 </div>
               </div>
             ))}

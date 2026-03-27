@@ -151,10 +151,10 @@ export function DonutChart(props: {
   if (props.loading) {
     return (
       <div className="donut-card donut-card-skeleton" aria-hidden="true">
-        <div className="donut-visual-skeleton">
+        <div className="donut-visual-skeleton echarts-for-react">
           <span className="skeleton-block donut-ring-skeleton" />
-          <span className="skeleton-block skeleton-inline donut-total-skeleton" />
-          <span className="skeleton-block skeleton-inline donut-caption-skeleton" />
+          <span className="skeleton-block skeleton-inline donut-total-skeleton donut-total-skeleton-main" />
+          <span className="skeleton-block skeleton-inline donut-caption-skeleton donut-caption-skeleton-main" />
         </div>
 
         <div className="ranking-list ranking-list-skeleton">
