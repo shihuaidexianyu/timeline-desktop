@@ -10,32 +10,32 @@ import type {
 const DAY_SECONDS = 24 * 60 * 60
 const MERGE_GAP_SECONDS = 60
 const APP_PRESET_COLORS: string[] = [
-  '#2f6fed',
-  '#14b8a6',
-  '#3b82f6',
-  '#06b6d4',
-  '#f59e0b',
-  '#d64545',
-  '#65a30d',
-  '#6366f1',
-  '#10b981',
-  '#22c55e',
-  '#0ea5e9',
-  '#f97316',
+  '#FF6B6B',
+  '#4ECDC4',
+  '#45B7D1',
+  '#FFA07A',
+  '#FECB93',
+  '#B19CD9',
+  '#98D8C8',
+  '#F7DC6F',
+  '#FF5252',
+  '#26A69A',
+  '#E84C3F',
+  '#CE93D8',
 ]
 const DOMAIN_PRESET_COLORS: string[] = [
-  '#1f5bd8',
-  '#14b8a6',
-  '#0ea5e9',
-  '#2f6fed',
-  '#10b981',
-  '#f59e0b',
-  '#d64545',
-  '#65a30d',
-  '#06b6d4',
-  '#0f9f8f',
-  '#f97316',
-  '#6366f1',
+  '#45B7D1',
+  '#4ECDC4',
+  '#FF6B6B',
+  '#B19CD9',
+  '#FECB93',
+  '#FFA07A',
+  '#98D8C8',
+  '#F7DC6F',
+  '#E84C3F',
+  '#26A69A',
+  '#FF5252',
+  '#CE93D8',
 ]
 
 export type TooltipDatum = {
@@ -587,10 +587,10 @@ function presenceLabel(state: PresenceSegment['state']) {
 
 function presenceColor(state: PresenceSegment['state']) {
   if (state === 'active') {
-    return '#2f6fed'
+    return '#10b981'
   }
   if (state === 'idle') {
-    return '#14b8a6'
+    return '#8090a4'
   }
   return '#8da0b6'
 }
