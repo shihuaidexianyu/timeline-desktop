@@ -1,5 +1,5 @@
 [workspace]
-members = ["apps/timeline-agent", "crates/common"]
+members = ["apps/timeline-backend", "crates/common"]
 resolver = "2"
 
 [workspace.package]

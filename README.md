@@ -10,7 +10,7 @@
 
 ## 组件结构
 
-- `apps/timeline-agent`
+- `apps/timeline-backend`
   Rust 本地常驻服务。负责 Windows 采集、SQLite 存储、本地 HTTP API、托盘、自启动设置。
 - `apps/web-ui`
   React + Vite 本地前端。负责时间线、统计图和设置页。
@@ -208,7 +208,7 @@ npm run dev
 timeline/
 ├─ apps/
 │  ├─ browser-extension/
-│  ├─ timeline-agent/
+│  ├─ timeline-backend/
 │  └─ web-ui/
 ├─ config/
 ├─ crates/
