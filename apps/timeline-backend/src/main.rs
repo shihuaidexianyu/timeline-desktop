@@ -23,7 +23,7 @@ use anyhow::{Context, Result, anyhow};
 use fs2::FileExt;
 use std::env;
 use std::fs::OpenOptions;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use time::{OffsetDateTime, UtcOffset};
 use tracing::{info, warn};
@@ -40,11 +40,17 @@ enum StartupMode {
 #[tokio::main]
 async fn main() -> Result<()> {
     let raw_args: Vec<String> = env::args().skip(1).collect();
-    match parse_startup_mode(&raw_args)? {
+    let result = match parse_startup_mode(&raw_args)? {
         StartupMode::Launcher { forwarded_args } => run_launcher_mode(forwarded_args),
         StartupMode::Backend { backend_args } => run_backend_mode(&backend_args).await,
         StartupMode::ApplyUpdate(args) => updater::run_apply_update(args).await,
+    };
+
+    if let Err(error) = &result {
+        system::show_startup_error_dialog("Timeline 启动失败", &format!("{error:#}"));
     }
+
+    result
 }
 
 fn parse_startup_mode(raw_args: &[String]) -> Result<StartupMode> {
@@ -79,6 +85,7 @@ fn run_launcher_mode(forwarded_args: Vec<String>) -> Result<()> {
     let mut child_args = Vec::with_capacity(forwarded_args.len() + 1);
     child_args.push(BACKEND_MODE_FLAG.to_string());
     child_args.extend(forwarded_args);
+    ensure_default_config_arg(&mut child_args, &install_root);
 
     let status = Command::new(&backend_executable)
         .args(child_args)
@@ -93,6 +100,16 @@ fn run_launcher_mode(forwarded_args: Vec<String>) -> Result<()> {
         })?;
 
     std::process::exit(status.code().unwrap_or(1));
+}
+
+fn ensure_default_config_arg(child_args: &mut Vec<String>, install_root: &Path) {
+    if child_args.iter().any(|arg| arg == "--config") {
+        return;
+    }
+
+    let default_config = install_root.join("config").join("timeline.toml");
+    child_args.push("--config".to_string());
+    child_args.push(default_config.display().to_string());
 }
 
 async fn run_backend_mode(backend_args: &[String]) -> Result<()> {

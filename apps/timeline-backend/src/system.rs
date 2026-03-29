@@ -28,7 +28,8 @@ use windows::Win32::System::Variant::VT_LPWSTR;
 use windows::Win32::UI::Shell::PropertiesSystem::IPropertyStore;
 use windows::Win32::UI::Shell::{IShellLinkW, ShellExecuteW, ShellLink};
 use windows::Win32::UI::WindowsAndMessaging::{
-    MB_ICONINFORMATION, MB_OK, MB_SETFOREGROUND, MB_TOPMOST, MessageBoxW, SW_SHOWNORMAL,
+    MB_ICONERROR, MB_ICONINFORMATION, MB_OK, MB_SETFOREGROUND, MB_TOPMOST, MessageBoxW,
+    SW_SHOWNORMAL,
 };
 use windows::core::{GUID, Interface, PCWSTR, PWSTR};
 use winreg::RegKey;
@@ -301,6 +302,14 @@ fn show_break_reminder_toast(title: &str, message: &str) -> Result<()> {
 }
 
 fn show_break_reminder_dialog(title: &str, message: &str) -> Result<()> {
+    show_message_box(title, message, MB_OK | MB_ICONINFORMATION | MB_SETFOREGROUND | MB_TOPMOST)
+}
+
+pub fn show_startup_error_dialog(title: &str, message: &str) {
+    let _ = show_message_box(title, message, MB_OK | MB_ICONERROR | MB_SETFOREGROUND | MB_TOPMOST);
+}
+
+fn show_message_box(title: &str, message: &str, style: windows::Win32::UI::WindowsAndMessaging::MESSAGEBOX_STYLE) -> Result<()> {
     let title = to_wide(title);
     let message = to_wide(message);
     let result = unsafe {
@@ -308,7 +317,7 @@ fn show_break_reminder_dialog(title: &str, message: &str) -> Result<()> {
             Some(HWND::default()),
             windows::core::PCWSTR(message.as_ptr()),
             windows::core::PCWSTR(title.as_ptr()),
-            MB_OK | MB_ICONINFORMATION | MB_SETFOREGROUND | MB_TOPMOST,
+            style,
         )
     };
 
@@ -427,17 +436,96 @@ fn build_tray_menu() -> Menu {
 /// a single visual identity.
 fn build_tray_icon(state: &AgentState) -> Result<Icon> {
     let launch_exe = state.launch_executable_path();
+    let mut candidates = Vec::new();
     if launch_exe.is_file() {
-        return Icon::from_path(&launch_exe, Some((32, 32))).with_context(|| {
-            format!("failed to load tray icon from launch executable {:?}", launch_exe)
-        });
+        candidates.push(launch_exe);
     }
 
     let current_exe = std::env::current_exe().context("failed to resolve current executable")?;
-    Icon::from_path(&current_exe, Some((32, 32))).with_context(|| {
-        format!(
-            "failed to load tray icon from current executable {:?}",
-            current_exe
-        )
-    })
+    if current_exe.is_file() && !candidates.iter().any(|path| path == &current_exe) {
+        candidates.push(current_exe.clone());
+    }
+
+    for candidate in candidates {
+        match Icon::from_path(&candidate, Some((32, 32))) {
+            Ok(icon) => return Ok(icon),
+            Err(error) => {
+                warn!(
+                    ?error,
+                    executable = %candidate.display(),
+                    "failed to load tray icon from executable, trying next fallback"
+                );
+            }
+        }
+    }
+
+    warn!("using built-in fallback tray icon");
+    build_fallback_clock_icon()
+}
+
+fn build_fallback_clock_icon() -> Result<Icon> {
+    const SIZE: u32 = 32;
+    let mut rgba = vec![0u8; (SIZE * SIZE * 4) as usize];
+    let center = 15.5f32;
+    let outer = 13.0f32;
+    let inner = 10.8f32;
+
+    for y in 0..SIZE {
+        for x in 0..SIZE {
+            let dx = x as f32 - center;
+            let dy = y as f32 - center;
+            let dist = (dx * dx + dy * dy).sqrt();
+            if dist <= outer && dist >= inner {
+                set_pixel(&mut rgba, x, y, [25, 25, 25, 255], SIZE);
+            }
+        }
+    }
+
+    draw_clock_hand(&mut rgba, center, center, 0.0, 6.0, [25, 25, 25, 255], SIZE); // minute hand
+    draw_clock_hand(
+        &mut rgba,
+        center,
+        center,
+        -55.0_f32.to_radians(),
+        4.5,
+        [25, 25, 25, 255],
+        SIZE,
+    ); // hour hand
+    set_pixel(&mut rgba, center as u32, center as u32, [25, 25, 25, 255], SIZE);
+
+    Icon::from_rgba(rgba, SIZE, SIZE).context("failed to create fallback tray icon")
+}
+
+fn draw_clock_hand(
+    rgba: &mut [u8],
+    cx: f32,
+    cy: f32,
+    angle_rad: f32,
+    length: f32,
+    color: [u8; 4],
+    size: u32,
+) {
+    let end_x = cx + angle_rad.sin() * length;
+    let end_y = cy - angle_rad.cos() * length;
+    let steps = 64u32;
+    for step in 0..=steps {
+        let t = step as f32 / steps as f32;
+        let x = (cx + (end_x - cx) * t).round() as i32;
+        let y = (cy + (end_y - cy) * t).round() as i32;
+        if x >= 0 && y >= 0 {
+            set_pixel(rgba, x as u32, y as u32, color, size);
+        }
+    }
+}
+
+fn set_pixel(rgba: &mut [u8], x: u32, y: u32, color: [u8; 4], size: u32) {
+    if x >= size || y >= size {
+        return;
+    }
+
+    let index = ((y * size + x) * 4) as usize;
+    rgba[index] = color[0];
+    rgba[index + 1] = color[1];
+    rgba[index + 2] = color[2];
+    rgba[index + 3] = color[3];
 }

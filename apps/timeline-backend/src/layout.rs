@@ -123,7 +123,9 @@ pub fn write_current_version(install_root: &Path, state: &CurrentVersionState) -
 }
 
 fn looks_like_install_root(path: &Path) -> bool {
-    path.join("config").is_dir()
+    let has_launcher = launcher_executable(path).is_file();
+    let has_portable_markers = path.join("config").is_dir()
         || path.join(CURRENT_VERSION_FILE).is_file()
-        || path.join(VERSIONS_DIR).is_dir()
+        || path.join(VERSIONS_DIR).is_dir();
+    has_launcher && has_portable_markers
 }

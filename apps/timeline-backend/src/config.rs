@@ -1,5 +1,6 @@
 //! Loads the timeline agent configuration from TOML and provides safe defaults.
 
+use crate::layout;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -186,6 +187,13 @@ fn resolve_config_path(explicit_path: Option<PathBuf>, runtime_root: &Path) -> R
 }
 
 fn discover_runtime_root() -> Result<PathBuf> {
+    if let Some(install_root) = std::env::var_os(layout::INSTALL_ROOT_ENV) {
+        let install_root = PathBuf::from(install_root);
+        if install_root.is_dir() {
+            return Ok(install_root);
+        }
+    }
+
     let current_dir = std::env::current_dir().context("failed to read current directory")?;
     let exe_candidates = current_exe_parent_candidates();
 
