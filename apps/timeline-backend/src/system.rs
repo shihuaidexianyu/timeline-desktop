@@ -334,7 +334,7 @@ fn run_tray_loop(state: AgentState) -> Result<()> {
 
     let event_loop = event_loop_builder.build();
     let tray_menu = build_tray_menu();
-    let tray_icon = build_tray_icon().context("failed to build tray icon image")?;
+    let tray_icon = build_tray_icon(&state).context("failed to build tray icon image")?;
     let open_id = MenuId::new(MENU_OPEN_ID);
     let quit_id = MenuId::new(MENU_QUIT_ID);
 
@@ -423,56 +423,21 @@ fn build_tray_menu() -> Menu {
     menu
 }
 
-/// Builds a 32×32 RGBA tray icon procedurally.
-///
-/// The icon depicts a stylized "T" (for Timeline) on a blue background:
-///
-/// ```text
-///   ┌──────────────────────────┐  ← dark border (2px, #0e1726)
-///   │  blue background #1c5ac4 │
-///   │     ┌───────────────┐    │
-///   │     │  white T-bar  │    │  ← horizontal bar (x 8..23, y 7..10)
-///   │     └───┬───┬───────┘    │
-///   │         │   │            │
-///   │         │ T │            │  ← vertical stem (x 14..17, y 6..25)
-///   │         │   │            │
-///   │         └───┘   ■■■■■   │  ← accent square (x 20..24, y 20..24, #568eff)
-///   └──────────────────────────┘
-/// ```
-fn build_tray_icon() -> Result<Icon> {
-    const SIZE: u32 = 32;
-    let mut rgba = vec![0u8; (SIZE * SIZE * 4) as usize];
-
-    // Color constants for the icon layers
-    const BORDER: (u8, u8, u8, u8) = (14, 23, 38, 255); // dark navy border
-    const BACKGROUND: (u8, u8, u8, u8) = (28, 90, 196, 255); // blue fill
-    const GLYPH: (u8, u8, u8, u8) = (255, 255, 255, 255); // white "T" letter
-    const ACCENT: (u8, u8, u8, u8) = (86, 142, 255, 255); // lighter blue dot
-
-    for y in 0..SIZE {
-        for x in 0..SIZE {
-            let offset = ((y * SIZE + x) * 4) as usize;
-            let is_border = x < 2 || x >= SIZE - 2 || y < 2 || y >= SIZE - 2;
-            let is_vertical = (14..=17).contains(&x) && (6..=25).contains(&y);
-            let is_horizontal = (8..=23).contains(&x) && (7..=10).contains(&y);
-            let is_highlight = (20..=24).contains(&x) && (20..=24).contains(&y);
-
-            let (r, g, b, a) = if is_border {
-                BORDER
-            } else if is_vertical || is_horizontal {
-                GLYPH
-            } else if is_highlight {
-                ACCENT
-            } else {
-                BACKGROUND
-            };
-
-            rgba[offset] = r;
-            rgba[offset + 1] = g;
-            rgba[offset + 2] = b;
-            rgba[offset + 3] = a;
-        }
+/// Builds the tray icon from the same executable icon resource so tray/exe keep
+/// a single visual identity.
+fn build_tray_icon(state: &AgentState) -> Result<Icon> {
+    let launch_exe = state.launch_executable_path();
+    if launch_exe.is_file() {
+        return Icon::from_path(&launch_exe, Some((32, 32))).with_context(|| {
+            format!("failed to load tray icon from launch executable {:?}", launch_exe)
+        });
     }
 
-    Icon::from_rgba(rgba, SIZE, SIZE).context("failed to create tray icon from rgba")
+    let current_exe = std::env::current_exe().context("failed to resolve current executable")?;
+    Icon::from_path(&current_exe, Some((32, 32))).with_context(|| {
+        format!(
+            "failed to load tray icon from current executable {:?}",
+            current_exe
+        )
+    })
 }
