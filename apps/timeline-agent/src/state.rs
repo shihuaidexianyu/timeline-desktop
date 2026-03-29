@@ -178,7 +178,7 @@ impl AgentState {
     pub fn launch_command(&self) -> String {
         let current_exe = std::env::current_exe()
             .map(|path| path.display().to_string())
-            .unwrap_or_else(|_| "timeline-agent".to_string());
+            .unwrap_or_else(|_| "timeline".to_string());
 
         if let Some(config_path) = self.config_path() {
             return format!(r#""{}" --config "{}""#, current_exe, config_path.display());

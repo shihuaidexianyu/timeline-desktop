@@ -50,13 +50,13 @@
 ### 1. 启动 agent
 
 ```powershell
-cargo run -p timeline-agent
+cargo run -p timeline
 ```
 
 如果要显式指定配置文件：
 
 ```powershell
-cargo run -p timeline-agent -- --config config/timeline-agent.toml
+cargo run -p timeline -- --config config/timeline.toml
 ```
 
 默认监听地址是 `127.0.0.1:46215`。
@@ -99,7 +99,7 @@ npm run dev
 
 ## 配置
 
-示例配置在 [config/timeline-agent.example.toml](config/timeline-agent.example.toml)。
+示例配置在 [config/timeline.example.toml](config/timeline.example.toml)。
 
 当前主要配置项：
 
@@ -146,7 +146,7 @@ npm run dev
 脚本会自动完成：
 
 1. 构建 `apps/web-ui/dist`
-2. 构建 `timeline-agent.exe`
+2. 构建 `timeline.exe`
 3. 收集浏览器扩展目录
 4. 生成便携版 zip 包
 
@@ -156,13 +156,13 @@ npm run dev
 
 ### 便携包布局
 
-- `timeline-agent.exe`
-- `config\timeline-agent.toml`
+- `timeline.exe`
+- `config\timeline.toml`
 - `data\`
 - `web-ui\dist\`
 - `browser-extension\`
 
-便携包不再额外生成启动脚本，直接运行 `timeline-agent.exe` 即可。
+便携包不再额外生成启动脚本，直接运行 `timeline.exe` 即可。
 
 ### 在线升级
 
@@ -173,11 +173,11 @@ npm run dev
 1. 请求 GitHub Release `latest`
 2. 下载最新的 `timeline-portable-*.zip`
 3. 在 agent 退出后覆盖程序文件
-4. 自动重新启动 `timeline-agent.exe`
+4. 自动重新启动 `timeline.exe`
 
 升级时会保留本地：
 
-- `config\timeline-agent.toml`
+- `config\timeline.toml`
 - `data\`
 
 也就是说，在线升级不会覆盖你的现有数据库和本地配置。

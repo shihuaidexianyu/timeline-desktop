@@ -81,7 +81,7 @@ async fn main() -> Result<()> {
 fn init_tracing(debug: bool) {
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
         if debug {
-            EnvFilter::new("timeline_agent=debug,info")
+            EnvFilter::new("timeline=debug,info")
         } else {
             EnvFilter::new("info")
         }
@@ -134,7 +134,7 @@ fn acquire_instance_lock(lockfile_path: &PathBuf) -> Result<std::fs::File> {
         .with_context(|| format!("failed to open {:?}", lockfile_path))?;
 
     file.try_lock_exclusive()
-        .map_err(|_| anyhow!("another timeline-agent instance is already running"))?;
+        .map_err(|_| anyhow!("another timeline instance is already running"))?;
 
     Ok(file)
 }

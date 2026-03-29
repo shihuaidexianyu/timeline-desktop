@@ -126,7 +126,7 @@ async fn prepare_release() -> Result<PreparedRelease> {
 
 async fn fetch_latest_release() -> Result<GithubRelease> {
     let client = Client::builder()
-        .user_agent(format!("timeline-agent/{}", env!("CARGO_PKG_VERSION")))
+        .user_agent(format!("timeline/{}", env!("CARGO_PKG_VERSION")))
         .build()
         .context("failed to build GitHub release client")?;
 
@@ -147,7 +147,7 @@ async fn fetch_latest_release() -> Result<GithubRelease> {
 
 async fn download_asset(asset: &GithubAsset, destination: &PathBuf) -> Result<()> {
     let client = Client::builder()
-        .user_agent(format!("timeline-agent/{}", env!("CARGO_PKG_VERSION")))
+        .user_agent(format!("timeline/{}", env!("CARGO_PKG_VERSION")))
         .build()
         .context("failed to build GitHub asset download client")?;
     let response = client
@@ -281,16 +281,16 @@ Expand-Archive -LiteralPath $PackageZip -DestinationPath $extractDir -Force
 $stageRoot = Resolve-StageRoot -ExtractDir $extractDir
 
 New-Item -ItemType Directory -Path $InstallRoot -Force | Out-Null
-Copy-File (Join-Path $stageRoot 'timeline-agent.exe') (Join-Path $InstallRoot 'timeline-agent.exe')
+Copy-File (Join-Path $stageRoot 'timeline.exe') (Join-Path $InstallRoot 'timeline.exe')
 Copy-Directory (Join-Path $stageRoot 'web-ui') (Join-Path $InstallRoot 'web-ui')
 Copy-Directory (Join-Path $stageRoot 'browser-extension') (Join-Path $InstallRoot 'browser-extension')
 Copy-File (Join-Path $stageRoot 'README-portable.txt') (Join-Path $InstallRoot 'README-portable.txt')
 
 $configDir = Join-Path $InstallRoot 'config'
 New-Item -ItemType Directory -Path $configDir -Force | Out-Null
-Copy-File (Join-Path $stageRoot 'config\timeline-agent.example.toml') (Join-Path $configDir 'timeline-agent.example.toml')
-if (-not (Test-Path -LiteralPath (Join-Path $configDir 'timeline-agent.toml'))) {{
-    Copy-File (Join-Path $stageRoot 'config\timeline-agent.toml') (Join-Path $configDir 'timeline-agent.toml')
+Copy-File (Join-Path $stageRoot 'config\timeline.example.toml') (Join-Path $configDir 'timeline.example.toml')
+if (-not (Test-Path -LiteralPath (Join-Path $configDir 'timeline.toml'))) {{
+    Copy-File (Join-Path $stageRoot 'config\timeline.toml') (Join-Path $configDir 'timeline.toml')
 }}
 
 Start-Sleep -Milliseconds 250

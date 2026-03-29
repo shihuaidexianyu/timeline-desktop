@@ -4,7 +4,8 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
-const DEFAULT_CONFIG_PATH: &str = "config/timeline-agent.toml";
+const DEFAULT_CONFIG_PATH: &str = "config/timeline.toml";
+const LEGACY_CONFIG_PATH: &str = "config/timeline-agent.toml";
 const LEGACY_DEV_WEB_UI_URL: &str = "http://127.0.0.1:4173/#/stats";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -30,7 +31,7 @@ impl Default for AppConfig {
     fn default() -> Self {
         Self {
             database_path: PathBuf::from("data/timeline.sqlite"),
-            lockfile_path: PathBuf::from("data/timeline-agent.lock"),
+            lockfile_path: PathBuf::from("data/timeline.lock"),
             listen_addr: "127.0.0.1:46215".to_string(), // port chosen to avoid common conflicts
             web_ui_url: "http://127.0.0.1:46215/#/stats".to_string(),
             idle_threshold_secs: 300, // 5 minutes — standard idle detection threshold
@@ -168,7 +169,19 @@ fn ensure_parent(path: &Path) -> Result<()> {
 fn resolve_config_path(explicit_path: Option<PathBuf>, runtime_root: &Path) -> Result<PathBuf> {
     match explicit_path {
         Some(path) => absolutize_from(std::env::current_dir()?, path),
-        None => Ok(runtime_root.join(DEFAULT_CONFIG_PATH)),
+        None => {
+            let primary = runtime_root.join(DEFAULT_CONFIG_PATH);
+            if primary.is_file() {
+                return Ok(primary);
+            }
+
+            let legacy = runtime_root.join(LEGACY_CONFIG_PATH);
+            if legacy.is_file() {
+                return Ok(legacy);
+            }
+
+            Ok(primary)
+        }
     }
 }
 
@@ -253,6 +266,7 @@ fn push_unique(candidates: &mut Vec<PathBuf>, path: PathBuf) {
 
 fn looks_like_runtime_root(path: &Path) -> bool {
     path.join(DEFAULT_CONFIG_PATH).is_file()
+        || path.join(LEGACY_CONFIG_PATH).is_file()
         || path.join("Cargo.toml").is_file()
         || path.join("web-ui/dist/index.html").is_file()
         || path.join("apps/web-ui").is_dir()
@@ -304,7 +318,7 @@ mod tests {
         );
         assert_eq!(
             config.lockfile_path,
-            PathBuf::from(r"C:\Timeline\data\timeline-agent.lock")
+            PathBuf::from(r"C:\Timeline\data\timeline.lock")
         );
     }
 
@@ -329,7 +343,7 @@ mod tests {
     fn prefers_packaged_web_ui_before_working_directory() {
         let candidates = web_ui_dist_candidates(
             Some(Path::new(r"C:\Users\me\repo")),
-            Some(Path::new(r"D:\Timeline\timeline-agent.exe")),
+            Some(Path::new(r"D:\Timeline\timeline.exe")),
         );
 
         assert_eq!(
@@ -351,7 +365,7 @@ mod tests {
         let candidates = web_ui_dist_candidates(
             Some(Path::new(r"C:\Users\me\repo")),
             Some(Path::new(
-                r"C:\Users\me\repo\target\release\timeline-agent.exe",
+                r"C:\Users\me\repo\target\release\timeline.exe",
             )),
         );
 

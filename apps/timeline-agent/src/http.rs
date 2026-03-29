@@ -69,7 +69,7 @@ async fn get_health(
     State(state): State<AgentState>,
 ) -> Result<Json<ApiResponse<HealthResponse>>, AppError> {
     Ok(Json(ApiResponse::ok(HealthResponse {
-        service: "timeline-agent".to_string(),
+        service: "timeline".to_string(),
         version: env!("CARGO_PKG_VERSION").to_string(),
         status: "ok".to_string(),
         started_at: state.started_at(),
@@ -382,7 +382,7 @@ async fn frontend_not_built() -> impl IntoResponse {
     (
         StatusCode::SERVICE_UNAVAILABLE,
         Html(
-            "<!doctype html><html><head><meta charset=\"utf-8\"><title>timeline-agent</title></head><body><h1>前端尚未构建</h1><p>请在项目根目录先运行 <code>cd apps/web-ui &amp;&amp; npm run build</code>，然后重启 timeline-agent。</p></body></html>",
+            "<!doctype html><html><head><meta charset=\"utf-8\"><title>timeline</title></head><body><h1>前端尚未构建</h1><p>请在项目根目录先运行 <code>cd apps/web-ui &amp;&amp; npm run build</code>，然后重启 timeline。</p></body></html>",
         ),
     )
 }

@@ -55,10 +55,10 @@ $portableRoot = Join-Path $repoRoot 'target\portable\stage'
 
 $cargoMetadataJson = & cargo metadata --no-deps --format-version 1 --manifest-path (Join-Path $repoRoot 'Cargo.toml')
 $cargoMetadata = $cargoMetadataJson | ConvertFrom-Json
-$packageVersion = ($cargoMetadata.packages | Where-Object { $_.name -eq 'timeline-agent' } | Select-Object -First 1).version
+$packageVersion = ($cargoMetadata.packages | Where-Object { $_.name -eq 'timeline' } | Select-Object -First 1).version
 
 if ([string]::IsNullOrWhiteSpace($packageVersion)) {
-    throw 'Failed to resolve timeline-agent version from cargo metadata.'
+    throw 'Failed to resolve timeline version from cargo metadata.'
 }
 
 if (-not $SkipBuild) {
@@ -88,17 +88,17 @@ if (-not $SkipBuild) {
         Pop-Location
     }
 
-    Write-Host 'Building timeline-agent...' -ForegroundColor Cyan
+    Write-Host 'Building timeline...' -ForegroundColor Cyan
     Push-Location $repoRoot
     try {
-        & cargo build --profile $Profile -p timeline-agent
+        & cargo build --profile $Profile -p timeline
     }
     finally {
         Pop-Location
     }
 }
 
-$agentBinary = Join-Path $repoRoot "target\$Profile\timeline-agent.exe"
+$agentBinary = Join-Path $repoRoot "target\$Profile\timeline.exe"
 $webUiDist = Join-Path $webUiDir 'dist'
 
 if (-not (Test-Path $agentBinary)) {
@@ -121,10 +121,10 @@ $portableDataDir = Join-Path $portableStage 'data'
 
 New-Item -ItemType Directory -Path $portableStage, $portableWebUiStage, $portableExtensionStage, $portableConfigDir, $portableDataDir -Force | Out-Null
 
-Copy-Item -Path $agentBinary -Destination (Join-Path $portableStage 'timeline-agent.exe') -Force
+Copy-Item -Path $agentBinary -Destination (Join-Path $portableStage 'timeline.exe') -Force
 Copy-DirectoryContents -Source $webUiDist -Destination $portableWebUiStage
 Copy-DirectoryContents -Source $extensionDir -Destination $portableExtensionStage
-Copy-Item -Path (Join-Path $repoRoot 'config\timeline-agent.example.toml') -Destination (Join-Path $portableConfigDir 'timeline-agent.example.toml') -Force
+Copy-Item -Path (Join-Path $repoRoot 'config\timeline.example.toml') -Destination (Join-Path $portableConfigDir 'timeline.example.toml') -Force
 
 $portableReadme = @'
 Timeline 便携包内容
@@ -132,7 +132,7 @@ Timeline 便携包内容
 
 解压后会包含：
 
-1. timeline-agent.exe
+1. timeline.exe
 2. 内置的 web-ui/dist 前端静态文件
 3. browser-extension 浏览器扩展目录
 
@@ -152,7 +152,7 @@ Set-Content -Path (Join-Path $portableStage 'README-portable.txt') -Value $porta
 
 $portableConfig = @'
 database_path = "../data/timeline.sqlite"
-lockfile_path = "../data/timeline-agent.lock"
+lockfile_path = "../data/timeline.lock"
 listen_addr = "127.0.0.1:46215"
 web_ui_url = "http://127.0.0.1:46215/#/stats"
 idle_threshold_secs = 300
@@ -165,7 +165,7 @@ ignored_apps = []
 ignored_domains = []
 '@
 
-Set-Content -Path (Join-Path $portableConfigDir 'timeline-agent.toml') -Value $portableConfig -Encoding UTF8
+Set-Content -Path (Join-Path $portableConfigDir 'timeline.toml') -Value $portableConfig -Encoding UTF8
 
 $portableZip = Join-Path $outputRoot "timeline-portable-$packageVersion.zip"
 Remove-Item -Path $portableZip -Force -ErrorAction SilentlyContinue

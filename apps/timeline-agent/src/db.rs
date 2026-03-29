@@ -989,7 +989,7 @@ mod tests {
     #[tokio::test]
     async fn restore_unclosed_segments_uses_last_seen_at_instead_of_restart_time() {
         let unique = format!(
-            "timeline-agent-test-{}.sqlite",
+            "timeline-test-{}.sqlite",
             OffsetDateTime::now_utc().unix_timestamp_nanos()
         );
         let database_path = std::env::temp_dir().join(unique);

@@ -36,13 +36,13 @@ use winreg::RegKey;
 use winreg::enums::{HKEY_CURRENT_USER, KEY_READ};
 
 const AUTOSTART_REG_PATH: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
-const AUTOSTART_VALUE_NAME: &str = "TimelineAgent";
+const AUTOSTART_VALUE_NAME: &str = "Timeline";
 const MENU_OPEN_ID: &str = "open";
 const MENU_QUIT_ID: &str = "quit";
 const BREAK_REMINDER_TITLE: &str = "Timeline 健康提醒";
-pub const TOAST_APP_USER_MODEL_ID: &str = "com.timeline.agent";
+pub const TOAST_APP_USER_MODEL_ID: &str = "com.timeline";
 const START_MENU_SHORTCUT_DIR: &str = "Timeline";
-const START_MENU_SHORTCUT_NAME: &str = "Timeline Agent.lnk";
+const START_MENU_SHORTCUT_NAME: &str = "Timeline.lnk";
 const PKEY_APP_USER_MODEL_ID: PROPERTYKEY = PROPERTYKEY {
     fmtid: GUID::from_u128(0x9f4c2855_9f79_4b39_a8d0_e1d42de1d5f3),
     pid: 5,
@@ -198,7 +198,7 @@ fn write_shortcut_with_aumid(
         }
     }
 
-    let description_wide = to_wide("Timeline Agent");
+    let description_wide = to_wide("Timeline");
     unsafe {
         shell_link
             .SetDescription(PCWSTR(description_wide.as_ptr()))
@@ -359,7 +359,7 @@ fn run_tray_loop(state: AgentState) -> Result<()> {
     }));
 
     let _tray = TrayIconBuilder::new()
-        .with_tooltip("Timeline Agent")
+        .with_tooltip("Timeline")
         .with_icon(tray_icon)
         .with_menu(Box::new(tray_menu))
         .with_menu_on_left_click(false)

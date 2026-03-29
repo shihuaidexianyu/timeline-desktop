@@ -156,7 +156,7 @@ async function request<T>(path: string): Promise<T> {
     response = await fetch(`${API_BASE_URL}${path}`)
   } catch {
     throw new Error(
-      `无法连接本地服务 ${API_BASE_URL}，请确认 timeline-agent 已启动并已允许跨域访问。`,
+      `无法连接本地服务 ${API_BASE_URL}，请确认 timeline 已启动并已允许跨域访问。`,
     )
   }
 

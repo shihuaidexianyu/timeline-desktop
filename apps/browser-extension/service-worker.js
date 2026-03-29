@@ -283,7 +283,11 @@ async function rememberDiscoveredAgentOrigin(origin) {
   try {
     const response = await fetch(`${origin}/health`)
     const result = await response.json().catch(() => null)
-    if (response.ok && result?.ok && result.data?.service === 'timeline-agent') {
+    if (
+      response.ok &&
+      result?.ok &&
+      ['timeline', 'timeline-agent'].includes(result.data?.service)
+    ) {
       await rememberAgentBaseUrl(origin)
     }
   } catch {

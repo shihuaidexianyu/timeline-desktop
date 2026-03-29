@@ -509,7 +509,7 @@ function App() {
                       )
                       setSettingsNotice(
                         result.requires_restart
-                          ? '设置已保存，重启 timeline-agent 后生效。'
+                          ? '设置已保存，重启 timeline 后生效。'
                           : null,
                       )
                     }
@@ -963,7 +963,7 @@ function SettingsPage(props: {
 
               <p className="settings-update-copy">
                 从 GitHub Release latest 拉取最新便携包，只覆盖程序文件，保留本地
-                <code>config/timeline-agent.toml</code> 和 <code>data/</code>。
+                <code>config/timeline.toml</code> 和 <code>data/</code>。
               </p>
 
               {props.updateInfo?.published_at ? (
