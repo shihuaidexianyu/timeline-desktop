@@ -467,31 +467,47 @@ fn build_fallback_clock_icon() -> Result<Icon> {
     const SIZE: u32 = 32;
     let mut rgba = vec![0u8; (SIZE * SIZE * 4) as usize];
     let center = 15.5f32;
-    let outer = 13.0f32;
-    let inner = 10.8f32;
+    let outer = 13.3f32;
+    let ring_inner = 10.5f32;
+    let dial_color = [255, 255, 255, 255];
+    let dark = [20, 28, 38, 255];
 
     for y in 0..SIZE {
         for x in 0..SIZE {
             let dx = x as f32 - center;
             let dy = y as f32 - center;
             let dist = (dx * dx + dy * dy).sqrt();
-            if dist <= outer && dist >= inner {
-                set_pixel(&mut rgba, x, y, [25, 25, 25, 255], SIZE);
+            if dist <= outer {
+                set_pixel(&mut rgba, x, y, dial_color, SIZE);
+            }
+            if dist <= outer && dist >= ring_inner {
+                set_pixel(&mut rgba, x, y, dark, SIZE);
             }
         }
     }
 
-    draw_clock_hand(&mut rgba, center, center, 0.0, 6.0, [25, 25, 25, 255], SIZE); // minute hand
+    draw_clock_hand(&mut rgba, center, center, 0.0, 6.0, 1.2, dark, SIZE); // minute hand
     draw_clock_hand(
         &mut rgba,
         center,
         center,
         -55.0_f32.to_radians(),
         4.5,
-        [25, 25, 25, 255],
+        1.5,
+        dark,
         SIZE,
     ); // hour hand
-    set_pixel(&mut rgba, center as u32, center as u32, [25, 25, 25, 255], SIZE);
+    draw_clock_hand(
+        &mut rgba,
+        center,
+        center,
+        0.0,
+        3.1,
+        1.0,
+        dark,
+        SIZE,
+    ); // top tick
+    set_pixel(&mut rgba, center as u32, center as u32, dark, SIZE);
 
     Icon::from_rgba(rgba, SIZE, SIZE).context("failed to create fallback tray icon")
 }
@@ -502,18 +518,28 @@ fn draw_clock_hand(
     cy: f32,
     angle_rad: f32,
     length: f32,
+    thickness: f32,
     color: [u8; 4],
     size: u32,
 ) {
     let end_x = cx + angle_rad.sin() * length;
     let end_y = cy - angle_rad.cos() * length;
     let steps = 64u32;
+    let radius = thickness.max(1.0);
     for step in 0..=steps {
         let t = step as f32 / steps as f32;
         let x = (cx + (end_x - cx) * t).round() as i32;
         let y = (cy + (end_y - cy) * t).round() as i32;
-        if x >= 0 && y >= 0 {
-            set_pixel(rgba, x as u32, y as u32, color, size);
+        for oy in -2..=2 {
+            for ox in -2..=2 {
+                let fx = x as f32 + ox as f32;
+                let fy = y as f32 + oy as f32;
+                let ddx = fx - x as f32;
+                let ddy = fy - y as f32;
+                if (ddx * ddx + ddy * ddy).sqrt() <= radius && fx >= 0.0 && fy >= 0.0 {
+                    set_pixel(rgba, fx as u32, fy as u32, color, size);
+                }
+            }
         }
     }
 }

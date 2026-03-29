@@ -1,18 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Timeline">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#11224a"/>
-      <stop offset="100%" stop-color="#183470"/>
-    </linearGradient>
-  </defs>
-  <rect x="1.5" y="1.5" width="61" height="61" rx="12" fill="url(#bg)" stroke="#0b142b" stroke-width="3"/>
-  <circle cx="32" cy="32" r="20" fill="none" stroke="#a2c0ff" stroke-width="3.2"/>
-  <circle cx="32" cy="32" r="16" fill="none" stroke="#edf4ff" stroke-width="2"/>
-  <path d="M32 32 L25.2 27.4" stroke="#ffffff" stroke-width="2.8" stroke-linecap="round"/>
-  <path d="M32 32 L40.8 26.2" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/>
-  <circle cx="32" cy="32" r="2" fill="#ffffff"/>
-  <line x1="32" y1="14" x2="32" y2="17" stroke="#edf4ff" stroke-width="1.4" stroke-linecap="round"/>
-  <line x1="32" y1="47" x2="32" y2="50" stroke="#edf4ff" stroke-width="1.4" stroke-linecap="round"/>
-  <line x1="14" y1="32" x2="17" y2="32" stroke="#edf4ff" stroke-width="1.4" stroke-linecap="round"/>
-  <line x1="47" y1="32" x2="50" y2="32" stroke="#edf4ff" stroke-width="1.4" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <circle cx="32" cy="32" r="26" fill="#ffffff" stroke="#1c242e" stroke-width="6"/>
+  <line x1="32" y1="16" x2="32" y2="22" stroke="#141c26" stroke-width="4" stroke-linecap="round"/>
+  <line x1="32" y1="32" x2="40" y2="20" stroke="#141c26" stroke-width="5" stroke-linecap="round"/>
+  <line x1="32" y1="32" x2="46" y2="36" stroke="#141c26" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="32" cy="32" r="3.5" fill="#141c26"/>
 </svg>
