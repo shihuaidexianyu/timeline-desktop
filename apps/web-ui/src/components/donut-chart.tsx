@@ -13,6 +13,7 @@ import {
   type DashboardFilter,
   type DonutSlice,
 } from '../lib/chart-model'
+import { getEChartsPieBorderColor, getEChartsTooltipColors, getThemeColor } from '../lib/theme'
 
 echarts.use([PieChart, TooltipComponent, GraphicComponent, SVGRenderer])
 
@@ -24,7 +25,6 @@ const ReactEChartsCore = (
     : ReactEChartsCoreImport
 ) as React.ComponentType<Record<string, unknown>>
 
-const LABEL_COLOR = '#1d2c43'
 const MONO_FAMILY = '"JetBrains Mono", "Cascadia Mono", "Consolas", "SFMono-Regular", monospace'
 const PIE_CENTER_X = '50%'
 
@@ -49,6 +49,9 @@ export function DonutChart(props: {
   const rankingRows = isLoading ? placeholderSlices : rankingSlices
 
   const option = useMemo<EChartsOption>(() => {
+    const tooltipColors = getEChartsTooltipColors()
+    const pieBorder = getEChartsPieBorderColor()
+    const labelColor = getThemeColor('--text-main', '#1f2a37')
     return {
       animation: !isLoading,
       animationDuration: 180,
@@ -60,11 +63,11 @@ export function DonutChart(props: {
         trigger: 'item',
         appendToBody: true,
         transitionDuration: 0.08,
-        backgroundColor: 'rgba(255, 255, 255, 0.98)',
-        borderColor: 'rgba(145, 159, 180, 0.28)',
+        backgroundColor: tooltipColors.backgroundColor,
+        borderColor: tooltipColors.borderColor,
         borderWidth: 1,
         textStyle: {
-          color: LABEL_COLOR,
+          color: labelColor,
           fontFamily: MONO_FAMILY,
         },
         formatter: (params) => {
@@ -92,7 +95,7 @@ export function DonutChart(props: {
           label: { show: false },
           labelLine: { show: false },
           itemStyle: {
-            borderColor: '#f7faff',
+            borderColor: pieBorder,
             borderWidth: 1,
           },
           emphasis: {
@@ -100,7 +103,7 @@ export function DonutChart(props: {
             scaleSize: 10,
             itemStyle: {
               shadowBlur: 14,
-              shadowColor: 'rgba(28, 50, 86, 0.2)',
+              shadowColor: 'rgba(0, 0, 0, 0.35)',
             },
           },
           data: chartSlices.map((slice) => {
@@ -261,6 +264,9 @@ export function CompactDonutChart(props: {
   }, [chartSlices, isLoading, props.selectedKey])
 
   const option = useMemo<EChartsOption>(() => {
+    const tooltipColors = getEChartsTooltipColors()
+    const pieBorder = getEChartsPieBorderColor()
+    const labelColor = getThemeColor('--text-main', '#1f2a37')
     return {
       animation: !isLoading,
       animationDuration: 180,
@@ -272,11 +278,11 @@ export function CompactDonutChart(props: {
         trigger: 'item',
         appendToBody: true,
         transitionDuration: 0.08,
-        backgroundColor: 'rgba(255, 255, 255, 0.98)',
-        borderColor: 'rgba(145, 159, 180, 0.28)',
+        backgroundColor: tooltipColors.backgroundColor,
+        borderColor: tooltipColors.borderColor,
         borderWidth: 1,
         textStyle: {
-          color: LABEL_COLOR,
+          color: labelColor,
           fontFamily: MONO_FAMILY,
         },
         formatter: (params) => {
@@ -305,7 +311,7 @@ export function CompactDonutChart(props: {
           label: { show: false },
           labelLine: { show: false },
           itemStyle: {
-            borderColor: '#f7faff',
+            borderColor: pieBorder,
             borderWidth: 1,
           },
           emphasis: {
@@ -313,7 +319,7 @@ export function CompactDonutChart(props: {
             scaleSize: 10,
             itemStyle: {
               shadowBlur: 14,
-              shadowColor: 'rgba(28, 50, 86, 0.2)',
+              shadowColor: 'rgba(0, 0, 0, 0.35)',
             },
           },
           data: chartSlices.map((slice) => {

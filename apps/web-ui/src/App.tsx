@@ -31,6 +31,7 @@ import {
 import { TimelineClock } from './components/timeline-clock'
 import { TimelineChart } from './components/timeline-chart'
 import { StatsPage, type WeekBarDatum } from './pages/stats-page'
+import { useTheme, type ThemeMode } from './hooks/use-theme'
 
 const MAX_ZOOM_HOURS = 8
 const MIN_ZOOM_HOURS = 1 / 12
@@ -43,6 +44,7 @@ const PAGE_ITEMS = [
 type AppPage = (typeof PAGE_ITEMS)[number]['id']
 
 function App() {
+  const { theme, setTheme } = useTheme()
   const [page, setPage] = useHashPage()
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [timeline, setTimeline] = useState<TimelineDayResponse | null>(null)
@@ -458,6 +460,8 @@ function App() {
                 isSettingsRefreshing={isSettingsRefreshing}
                 checkingUpdate={checkingUpdate}
                 installingUpdate={installingUpdate}
+                theme={theme}
+                onChangeTheme={setTheme}
                 onToggleAutostart={async (enabled) => {
                   setSavingAutostart(true)
                   setSettingsError(null)
@@ -814,6 +818,8 @@ function SettingsPage(props: {
   isSettingsRefreshing: boolean
   checkingUpdate: boolean
   installingUpdate: boolean
+  theme: ThemeMode
+  onChangeTheme: (theme: ThemeMode) => void
   onToggleAutostart: (enabled: boolean) => Promise<void>
   onUpdateConfig: (payload: {
     idle_threshold_secs: number
@@ -895,6 +901,31 @@ function SettingsPage(props: {
     <section className="page-stack">
       <div className="page-content-layout">
         <div className="page-content-main page-card-stack">
+          <div className="panel page-panel settings-card">
+            <div className="panel-header">
+              <div>
+                <p className="section-kicker">外观</p>
+                <h2>主题</h2>
+              </div>
+            </div>
+            <div className="settings-theme-options">
+              {([
+                { key: 'system', label: '跟随系统' },
+                { key: 'light', label: '明亮' },
+                { key: 'dark', label: '暗色' },
+              ] as const).map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  className={`theme-option ${props.theme === item.key ? 'is-active' : ''}`}
+                  onClick={() => props.onChangeTheme(item.key)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="panel page-panel settings-card">
             <div className="panel-header">
               <div>
