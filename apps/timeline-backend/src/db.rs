@@ -113,6 +113,19 @@ SET last_seen_at = COALESCE(ended_at, started_at)
 WHERE last_seen_at IS NULL;
 "#,
     },
+    Migration {
+        version: 4,
+        name: "add_performance_indexes",
+        sql: r#"
+CREATE INDEX IF NOT EXISTS idx_focus_segments_time_range ON focus_segments(started_at, ended_at);
+CREATE INDEX IF NOT EXISTS idx_browser_segments_time_range ON browser_segments(started_at, ended_at);
+CREATE INDEX IF NOT EXISTS idx_presence_segments_time_range ON presence_segments(started_at, ended_at);
+CREATE INDEX IF NOT EXISTS idx_presence_segments_state_time ON presence_segments(state, started_at, ended_at);
+CREATE INDEX IF NOT EXISTS idx_focus_segments_open ON focus_segments(id) WHERE ended_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_browser_segments_open ON browser_segments(id) WHERE ended_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_presence_segments_open ON presence_segments(id) WHERE ended_at IS NULL;
+"#,
+    },
 ];
 
 /// Keep recent raw events for local debugging while capping unbounded DB growth.
@@ -128,7 +141,9 @@ impl AgentStore {
                 .to_str()
                 .ok_or_else(|| anyhow!("database path is not valid UTF-8"))?,
         )?
-        .create_if_missing(true);
+        .create_if_missing(true)
+        .pragma("journal_mode", "WAL")
+        .pragma("synchronous", "NORMAL");
 
         let pool = SqlitePool::connect_with(connect_options)
             .await
@@ -491,6 +506,60 @@ ORDER BY started_at ASC
         })
     }
 
+    /// Parses a raw focus segment without clamping to day boundaries.
+    fn parse_focus_segment_row(row: &sqlx::sqlite::SqliteRow) -> Result<FocusSegment> {
+        let started_at = parse_time(row.get::<String, _>("started_at").as_str())?;
+        let ended_at = row
+            .get::<Option<String>, _>("ended_at")
+            .map(|v| parse_time(&v))
+            .transpose()?;
+        Ok(FocusSegment {
+            id: row.get("id"),
+            started_at,
+            ended_at,
+            app: AppInfo {
+                process_name: row.get("process_name"),
+                display_name: row.get("display_name"),
+                exe_path: row.get("exe_path"),
+                window_title: row.get("window_title"),
+                is_browser: row.get::<i64, _>("is_browser") == 1,
+            },
+        })
+    }
+
+    /// Parses a raw browser segment without clamping to day boundaries.
+    fn parse_browser_segment_row(row: &sqlx::sqlite::SqliteRow) -> Result<BrowserSegment> {
+        let started_at = parse_time(row.get::<String, _>("started_at").as_str())?;
+        let ended_at = row
+            .get::<Option<String>, _>("ended_at")
+            .map(|v| parse_time(&v))
+            .transpose()?;
+        Ok(BrowserSegment {
+            id: row.get("id"),
+            domain: row.get("domain"),
+            page_title: row.get("page_title"),
+            browser_window_id: row.get("browser_window_id"),
+            tab_id: row.get("tab_id"),
+            started_at,
+            ended_at,
+        })
+    }
+
+    /// Parses a raw presence segment without clamping to day boundaries.
+    fn parse_presence_segment_row(row: &sqlx::sqlite::SqliteRow) -> Result<PresenceSegment> {
+        let started_at = parse_time(row.get::<String, _>("started_at").as_str())?;
+        let ended_at = row
+            .get::<Option<String>, _>("ended_at")
+            .map(|v| parse_time(&v))
+            .transpose()?;
+        Ok(PresenceSegment {
+            id: row.get("id"),
+            state: parse_presence_state(row.get::<String, _>("state").as_str())?,
+            started_at,
+            ended_at,
+        })
+    }
+
     pub async fn read_app_stats(
         &self,
         date: Date,
@@ -620,6 +689,8 @@ ORDER BY started_at ASC
     }
 
     /// Returns daily summaries for every day in the given month.
+    /// Optimized to fetch all segments in 3 queries and aggregate in memory,
+    /// avoiding the previous N+1 pattern of calling read_day_summary per day.
     pub async fn read_month_calendar(
         &self,
         year: i32,
@@ -628,12 +699,150 @@ ORDER BY started_at ASC
     ) -> Result<MonthCalendarResponse> {
         let first_day =
             Date::from_calendar_date(year, month, 1).map_err(|e| anyhow!("invalid month: {e}"))?;
-        let days_in_month = days_in_month(year, month);
+        let days_in_month = days_in_month(year, month) as i64;
+
+        let month_start_local =
+            PrimitiveDateTime::new(first_day, time::Time::MIDNIGHT).assume_offset(timezone);
+        let month_end_local =
+            PrimitiveDateTime::new(first_day + Duration::days(days_in_month), time::Time::MIDNIGHT)
+                .assume_offset(timezone);
+
+        let month_start_utc = month_start_local.to_offset(UtcOffset::UTC);
+        let month_end_utc = month_end_local.to_offset(UtcOffset::UTC);
+        let now_utc = OffsetDateTime::now_utc();
+
+        let month_start_text = format_time(month_start_utc)?;
+        let month_end_text = format_time(month_end_utc)?;
+        let now_text = format_time(now_utc)?;
+
+        let focus_rows = sqlx::query(
+            r#"
+SELECT id, process_name, display_name, exe_path, window_title, is_browser, started_at, ended_at
+FROM focus_segments
+WHERE started_at < ? AND COALESCE(ended_at, ?) > ?
+ORDER BY started_at ASC
+"#,
+        )
+        .bind(&month_end_text)
+        .bind(&now_text)
+        .bind(&month_start_text)
+        .fetch_all(&self.pool)
+        .await?;
+
+        let browser_rows = sqlx::query(
+            r#"
+SELECT id, domain, page_title, browser_window_id, tab_id, started_at, ended_at
+FROM browser_segments
+WHERE started_at < ? AND COALESCE(ended_at, ?) > ?
+ORDER BY started_at ASC
+"#,
+        )
+        .bind(&month_end_text)
+        .bind(&now_text)
+        .bind(&month_start_text)
+        .fetch_all(&self.pool)
+        .await?;
+
+        let presence_rows = sqlx::query(
+            r#"
+SELECT id, state, started_at, ended_at
+FROM presence_segments
+WHERE started_at < ? AND COALESCE(ended_at, ?) > ?
+ORDER BY started_at ASC
+"#,
+        )
+        .bind(&month_end_text)
+        .bind(&now_text)
+        .bind(&month_start_text)
+        .fetch_all(&self.pool)
+        .await?;
+
+        let focus_segments: Vec<FocusSegment> = focus_rows
+            .iter()
+            .map(Self::parse_focus_segment_row)
+            .collect::<Result<Vec<_>>>()?;
+        let browser_segments: Vec<BrowserSegment> = browser_rows
+            .iter()
+            .map(Self::parse_browser_segment_row)
+            .collect::<Result<Vec<_>>>()?;
+        let presence_segments: Vec<PresenceSegment> = presence_rows
+            .iter()
+            .map(Self::parse_presence_segment_row)
+            .collect::<Result<Vec<_>>>()?;
 
         let mut days = Vec::with_capacity(days_in_month as usize);
         for day_offset in 0..days_in_month {
-            let date = first_day + Duration::days(day_offset as i64);
-            days.push(self.read_day_summary(date, timezone).await?);
+            let date = first_day + Duration::days(day_offset);
+            let (day_start_utc, day_end_utc) = day_bounds(date, timezone)?;
+
+            let mut focus_seconds = 0i64;
+            let mut browser_seconds = 0i64;
+            let mut active_seconds = 0i64;
+            let mut focus_count = 0usize;
+            let mut app_buckets: BTreeMap<String, (String, i64)> = BTreeMap::new();
+            let mut domain_buckets: BTreeMap<String, (String, i64)> = BTreeMap::new();
+
+            for seg in &focus_segments {
+                let seg_end = seg.ended_at.unwrap_or(now_utc);
+                if seg.started_at < day_end_utc && seg_end > day_start_utc {
+                    let start = clamp_start(seg.started_at, day_start_utc);
+                    let end = clamp_end(seg_end, day_end_utc, day_start_utc);
+                    let seconds = (end - start).whole_seconds().max(0);
+                    focus_seconds += seconds;
+                    focus_count += 1;
+                    app_buckets
+                        .entry(seg.app.process_name.clone())
+                        .or_insert((seg.app.display_name.clone(), 0))
+                        .1 += seconds;
+                }
+            }
+
+            for seg in &browser_segments {
+                let seg_end = seg.ended_at.unwrap_or(now_utc);
+                if seg.started_at < day_end_utc && seg_end > day_start_utc {
+                    let start = clamp_start(seg.started_at, day_start_utc);
+                    let end = clamp_end(seg_end, day_end_utc, day_start_utc);
+                    let seconds = (end - start).whole_seconds().max(0);
+                    browser_seconds += seconds;
+                    domain_buckets
+                        .entry(seg.domain.clone())
+                        .or_insert((seg.domain.clone(), 0))
+                        .1 += seconds;
+                }
+            }
+
+            for seg in &presence_segments {
+                let seg_end = seg.ended_at.unwrap_or(now_utc);
+                if seg.state == PresenceState::Active
+                    && seg.started_at < day_end_utc
+                    && seg_end > day_start_utc
+                {
+                    let start = clamp_start(seg.started_at, day_start_utc);
+                    let end = clamp_end(seg_end, day_end_utc, day_start_utc);
+                    let seconds = (end - start).whole_seconds().max(0);
+                    active_seconds += seconds;
+                }
+            }
+
+            let top_app = app_buckets
+                .into_iter()
+                .max_by_key(|(_, (_, seconds))| *seconds)
+                .map(|(key, (label, seconds))| KeyedDurationEntry { key, label, seconds });
+
+            let top_domain = domain_buckets
+                .into_iter()
+                .max_by_key(|(_, (_, seconds))| *seconds)
+                .map(|(key, (label, seconds))| KeyedDurationEntry { key, label, seconds });
+
+            days.push(DaySummary {
+                date: date.to_string(),
+                focus_seconds,
+                active_seconds,
+                browser_seconds,
+                switch_count: focus_count.saturating_sub(1) as i64,
+                top_app,
+                top_domain,
+            });
         }
 
         Ok(MonthCalendarResponse {
